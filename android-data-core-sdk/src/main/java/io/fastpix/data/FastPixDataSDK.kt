@@ -134,7 +134,7 @@ class FastPixDataSDK {
         }
     }
 
-    private class EventDispatchSpec(
+    private data class EventDispatchSpec(
         val eventName: String,
         val build: (SDKConfiguration, Int?) -> io.fastpix.data.domain.model.events.BaseEvent,
         val sideEffect: () -> Unit
