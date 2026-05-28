@@ -4,29 +4,10 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import io.fastpix.data.domain.model.events.BaseEvent
-import io.fastpix.data.domain.model.events.BufferedEvent
-import io.fastpix.data.domain.model.events.BufferingEvent
-import io.fastpix.data.domain.model.events.EndedEvent
-import io.fastpix.data.domain.model.events.ErrorEvent
-import io.fastpix.data.domain.model.events.PauseEvent
-import io.fastpix.data.domain.model.events.PlayEvent
-import io.fastpix.data.domain.model.events.PlayerReadyEvent
-import io.fastpix.data.domain.model.events.PlayingEvent
-import io.fastpix.data.domain.model.events.PulseEvent
-import io.fastpix.data.domain.model.events.RequestCancelledEvent
-import io.fastpix.data.domain.model.events.RequestCompletedEvent
-import io.fastpix.data.domain.model.events.RequestFailedEvent
-import io.fastpix.data.domain.model.events.SeekedEvent
-import io.fastpix.data.domain.model.events.SeekingEvent
-import io.fastpix.data.domain.model.events.VariantChangedEvent
-import io.fastpix.data.domain.model.events.ViewBeginEvent
-import io.fastpix.data.domain.model.events.ViewCompletedEvent
+import io.fastpix.data.storage.EventJsonCodec
 import io.fastpix.data.utils.JsonSerializer
 import io.fastpix.data.utils.Logger
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Manages persistent storage of unsent events
@@ -49,64 +30,7 @@ class EventPersistenceManager(context: Context) {
     /**
      * Deserialize a single event from JSON string based on eventName field
      */
-    private fun deserializeEvent(jsonString: String): BaseEvent? {
-        return try {
-            val jsonObject = JsonSerializer.json.parseToJsonElement(jsonString).jsonObject
-            // Check both "eventName" (for backward compatibility) and "evna" (SerialName)
-            val eventName = jsonObject["eventName"]?.jsonPrimitive?.content
-                ?: jsonObject["evna"]?.jsonPrimitive?.content
-
-            if (eventName == null) {
-                Logger.logWarning(
-                    TAG,
-                    "Event missing eventName field, cannot deserialize"
-                )
-                return null
-            }
-
-            when (eventName) {
-                "play" -> JsonSerializer.json.decodeFromString<PlayEvent>(jsonString)
-                "playing" -> JsonSerializer.json.decodeFromString<PlayingEvent>(jsonString)
-                "pause" -> JsonSerializer.json.decodeFromString<PauseEvent>(jsonString)
-                "ended" -> JsonSerializer.json.decodeFromString<EndedEvent>(jsonString)
-                "pulse" -> JsonSerializer.json.decodeFromString<PulseEvent>(jsonString)
-                "seeked" -> JsonSerializer.json.decodeFromString<SeekedEvent>(jsonString)
-                "seeking" -> JsonSerializer.json.decodeFromString<SeekingEvent>(jsonString)
-                "buffered" -> JsonSerializer.json.decodeFromString<BufferedEvent>(jsonString)
-                "buffering" -> JsonSerializer.json.decodeFromString<BufferingEvent>(jsonString)
-                "error" -> JsonSerializer.json.decodeFromString<ErrorEvent>(jsonString)
-                "playerReady" -> JsonSerializer.json.decodeFromString<PlayerReadyEvent>(jsonString)
-                "viewBegin" -> JsonSerializer.json.decodeFromString<ViewBeginEvent>(jsonString)
-                "viewCompleted" -> JsonSerializer.json.decodeFromString<ViewCompletedEvent>(
-                    jsonString
-                )
-
-                "variantChanged" -> JsonSerializer.json.decodeFromString<VariantChangedEvent>(
-                    jsonString
-                )
-
-                "requestCompleted" -> JsonSerializer.json.decodeFromString<RequestCompletedEvent>(
-                    jsonString
-                )
-
-                "requestFailed" -> JsonSerializer.json.decodeFromString<RequestFailedEvent>(
-                    jsonString
-                )
-
-                "requestCanceled" -> JsonSerializer.json.decodeFromString<RequestCancelledEvent>(
-                    jsonString
-                )
-
-                else -> {
-                    Logger.logWarning(TAG, "Unknown event type: $eventName")
-                    null
-                }
-            }
-        } catch (e: Exception) {
-            Logger.logError(TAG, "Failed to deserialize event", e)
-            null
-        }
-    }
+    private fun deserializeEvent(jsonString: String): BaseEvent? = EventJsonCodec.deserialize(jsonString)
 
     /**
      * Save events to persistent storage
@@ -132,112 +56,7 @@ class EventPersistenceManager(context: Context) {
             }
 
             // Convert to JSON and save using Kotlinx Serialization
-            // Serialize each event individually with its concrete serializer
-            val jsonArray = eventsToSave.mapNotNull { event ->
-                try {
-                    when (event) {
-                        is PlayEvent -> JsonSerializer.json.encodeToString(
-                            PlayEvent.serializer(),
-                            event
-                        )
-
-                        is PlayingEvent -> JsonSerializer.json.encodeToString(
-                            PlayingEvent.serializer(),
-                            event
-                        )
-
-                        is PauseEvent -> JsonSerializer.json.encodeToString(
-                            PauseEvent.serializer(),
-                            event
-                        )
-
-                        is EndedEvent -> JsonSerializer.json.encodeToString(
-                            EndedEvent.serializer(),
-                            event
-                        )
-
-                        is PulseEvent -> JsonSerializer.json.encodeToString(
-                            PulseEvent.serializer(),
-                            event
-                        )
-
-                        is SeekedEvent -> JsonSerializer.json.encodeToString(
-                            SeekedEvent.serializer(),
-                            event
-                        )
-
-                        is SeekingEvent -> JsonSerializer.json.encodeToString(
-                            SeekingEvent.serializer(),
-                            event
-                        )
-
-                        is BufferedEvent -> JsonSerializer.json.encodeToString(
-                            BufferedEvent.serializer(),
-                            event
-                        )
-
-                        is BufferingEvent -> JsonSerializer.json.encodeToString(
-                            BufferingEvent.serializer(),
-                            event
-                        )
-
-                        is ErrorEvent -> JsonSerializer.json.encodeToString(
-                            ErrorEvent.serializer(),
-                            event
-                        )
-
-                        is PlayerReadyEvent -> JsonSerializer.json.encodeToString(
-                            PlayerReadyEvent.serializer(),
-                            event
-                        )
-
-                        is ViewBeginEvent -> JsonSerializer.json.encodeToString(
-                            ViewBeginEvent.serializer(),
-                            event
-                        )
-
-                        is ViewCompletedEvent -> JsonSerializer.json.encodeToString(
-                            ViewCompletedEvent.serializer(),
-                            event
-                        )
-
-                        is VariantChangedEvent -> JsonSerializer.json.encodeToString(
-                            VariantChangedEvent.serializer(),
-                            event
-                        )
-
-                        is RequestCompletedEvent -> JsonSerializer.json.encodeToString(
-                            RequestCompletedEvent.serializer(),
-                            event
-                        )
-
-                        is RequestFailedEvent -> JsonSerializer.json.encodeToString(
-                            RequestFailedEvent.serializer(),
-                            event
-                        )
-
-                        is RequestCancelledEvent -> JsonSerializer.json.encodeToString(
-                            RequestCancelledEvent.serializer(),
-                            event
-                        )
-
-                        else -> {
-                            Logger.logWarning(
-                                TAG,
-                                "Unknown event type: ${event::class.simpleName}"
-                            )
-                            null
-                        }
-                    }
-                } catch (e: Exception) {
-                    Logger.logError(
-                        TAG,
-                        "Failed to serialize event: ${event::class.simpleName}",
-                        e
-                    )
-                    null
-                }
-            }
+            val jsonArray = eventsToSave.mapNotNull { EventJsonCodec.serialize(it) }
             val jsonString = "[${jsonArray.joinToString(",")}]"
 
             if (synchronous) {
@@ -342,111 +161,7 @@ class EventPersistenceManager(context: Context) {
                 clearPendingEvents()
             } else {
                 // Save remaining events back to storage
-                val jsonArray = remainingEvents.mapNotNull { event ->
-                    try {
-                        when (event) {
-                            is PlayEvent -> JsonSerializer.json.encodeToString(
-                                PlayEvent.serializer(),
-                                event
-                            )
-
-                            is PlayingEvent -> JsonSerializer.json.encodeToString(
-                                PlayingEvent.serializer(),
-                                event
-                            )
-
-                            is PauseEvent -> JsonSerializer.json.encodeToString(
-                                PauseEvent.serializer(),
-                                event
-                            )
-
-                            is EndedEvent -> JsonSerializer.json.encodeToString(
-                                EndedEvent.serializer(),
-                                event
-                            )
-
-                            is PulseEvent -> JsonSerializer.json.encodeToString(
-                                PulseEvent.serializer(),
-                                event
-                            )
-
-                            is SeekedEvent -> JsonSerializer.json.encodeToString(
-                                SeekedEvent.serializer(),
-                                event
-                            )
-
-                            is SeekingEvent -> JsonSerializer.json.encodeToString(
-                                SeekingEvent.serializer(),
-                                event
-                            )
-
-                            is BufferedEvent -> JsonSerializer.json.encodeToString(
-                                BufferedEvent.serializer(),
-                                event
-                            )
-
-                            is BufferingEvent -> JsonSerializer.json.encodeToString(
-                                BufferingEvent.serializer(),
-                                event
-                            )
-
-                            is ErrorEvent -> JsonSerializer.json.encodeToString(
-                                ErrorEvent.serializer(),
-                                event
-                            )
-
-                            is PlayerReadyEvent -> JsonSerializer.json.encodeToString(
-                                PlayerReadyEvent.serializer(),
-                                event
-                            )
-
-                            is ViewBeginEvent -> JsonSerializer.json.encodeToString(
-                                ViewBeginEvent.serializer(),
-                                event
-                            )
-
-                            is ViewCompletedEvent -> JsonSerializer.json.encodeToString(
-                                ViewCompletedEvent.serializer(),
-                                event
-                            )
-
-                            is VariantChangedEvent -> JsonSerializer.json.encodeToString(
-                                VariantChangedEvent.serializer(),
-                                event
-                            )
-
-                            is RequestCompletedEvent -> JsonSerializer.json.encodeToString(
-                                RequestCompletedEvent.serializer(),
-                                event
-                            )
-
-                            is RequestFailedEvent -> JsonSerializer.json.encodeToString(
-                                RequestFailedEvent.serializer(),
-                                event
-                            )
-
-                            is RequestCancelledEvent -> JsonSerializer.json.encodeToString(
-                                RequestCancelledEvent.serializer(),
-                                event
-                            )
-
-                            else -> {
-                                Logger.logWarning(
-                                    TAG,
-                                    "Unknown event type: ${event::class.simpleName}"
-                                )
-                                null
-                            }
-                        }
-                    } catch (e: Exception) {
-                        Logger.logError(
-                            TAG,
-                            "Failed to serialize event: ${event::class.simpleName}",
-                            e
-                        )
-                        null
-                    }
-                }
+                val jsonArray = remainingEvents.mapNotNull { EventJsonCodec.serialize(it) }
                 val jsonString = "[${jsonArray.joinToString(",")}]"
 
                 prefs.edit {

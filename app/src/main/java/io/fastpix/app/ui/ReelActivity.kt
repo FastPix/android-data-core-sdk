@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit
 @OptIn(UnstableApi::class)
 class ReelActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityReelBinding
+    private val binding: ActivityReelBinding by lazy { ActivityReelBinding.inflate(layoutInflater) }
     private var player: ExoPlayer? = null
     private val handler = Handler(Looper.getMainLooper())
     private var hideControlsRunnable: Runnable? = null
@@ -110,7 +110,6 @@ class ReelActivity : AppCompatActivity() {
             hide(WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
-        binding = ActivityReelBinding.inflate(layoutInflater)
         setContentView(binding.root)
         supportActionBar?.hide()
         initializePlayer()

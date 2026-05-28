@@ -39,10 +39,6 @@ class FastPixDataSDKTest {
     @get:Rule
     val instantTaskExecutorRule = InstantTaskExecutorRule()
 
-    private lateinit var sdk: FastPixDataSDK
-    private lateinit var sdkStateService: SDKStateService
-    private lateinit var dispatcher: EventDispatcher
-    private lateinit var config: SDKConfiguration
     private val mockViewBeginEvent: ViewBeginEvent = mockk(relaxed = true)
     private val mockPlayerReadyEvent: PlayerReadyEvent = mockk(relaxed = true)
     private val mockPlayEvent: PlayEvent = mockk(relaxed = true)
@@ -74,6 +70,15 @@ class FastPixDataSDKTest {
         override fun getSoftwareVersion(): String? = "1.0"
     }
 
+    private val sdk = FastPixDataSDK()
+    private val sdkStateService = SDKStateService()
+    private val dispatcher: EventDispatcher = mockk(relaxed = true)
+    private val config = SDKConfiguration(
+        workspaceId = "test-workspace",
+        playerListener = stubPlayerListener,
+        enableLogging = false
+    )
+
     @Before
     fun setUp() {
         mockkStatic(Log::class)
@@ -103,17 +108,8 @@ class FastPixDataSDKTest {
         mockkObject(PlayEventBuilder)
         every { PlayEventBuilder.build(any()) } returns mockPlayEvent
 
-        sdkStateService = SDKStateService()
-        dispatcher = mockk(relaxed = true)
         every { dispatcher.dispatchEvent(any()) } returns true
 
-        config = SDKConfiguration(
-            workspaceId = "test-workspace",
-            playerListener = stubPlayerListener,
-            enableLogging = false
-        )
-
-        sdk = FastPixDataSDK()
         injectPrivateField(sdk, "lifecycleState", AtomicReference(SdkLifecycleState.INITIALIZED))
         injectPrivateField(sdk, "configuration", config)
         injectPrivateField(sdk, "eventDispatcher", dispatcher)

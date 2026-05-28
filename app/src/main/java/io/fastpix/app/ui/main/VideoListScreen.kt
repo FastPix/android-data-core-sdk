@@ -8,14 +8,13 @@ import io.fastpix.app.databinding.ActivityVideoListScreenBinding
 import java.util.UUID
 
 class VideoListScreen : AppCompatActivity() {
-    private lateinit var binding: ActivityVideoListScreenBinding
+    private val binding: ActivityVideoListScreenBinding by lazy { ActivityVideoListScreenBinding.inflate(layoutInflater) }
     private val videoAdapter by lazy {
         VideoAdapter()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityVideoListScreenBinding.inflate(layoutInflater)
         setContentView(binding.root)
         actionBar?.hide()
         supportActionBar?.hide()
