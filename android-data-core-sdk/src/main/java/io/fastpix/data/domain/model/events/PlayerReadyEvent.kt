@@ -23,7 +23,7 @@ class PlayerReadyEvent(
     @SerialName("plwt") val playerWidth: Int? = null,
     @SerialName("plht") val playerHeight: Int? = null,
     @SerialName("vdsodu") val videoDuration: String? = null,
-) : BaseEvent()
+) : BaseEvent
 
 
 object PlayerReadyEventBuilder {

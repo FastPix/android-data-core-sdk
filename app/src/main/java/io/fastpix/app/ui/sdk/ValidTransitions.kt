@@ -2,9 +2,11 @@ package io.fastpix.data.exo
 
 internal val validTransitions = mapOf(
     null to setOf(PlayerEvent.PLAY, PlayerEvent.ERROR),
-    PlayerEvent.PLAY to setOf(PlayerEvent.PLAYING, PlayerEvent.ENDED, PlayerEvent.PAUSE, PlayerEvent.VARIANT_CHANGED,
+    PlayerEvent.PLAY to setOf(
+        PlayerEvent.PLAYING, PlayerEvent.ENDED, PlayerEvent.PAUSE, PlayerEvent.VARIANT_CHANGED,
         PlayerEvent.SEEKING,
-        PlayerEvent.ERROR),
+        PlayerEvent.ERROR
+    ),
     PlayerEvent.PLAYING to setOf(
         PlayerEvent.BUFFERING,
         PlayerEvent.PAUSE,
@@ -13,7 +15,11 @@ internal val validTransitions = mapOf(
         PlayerEvent.VARIANT_CHANGED,
         PlayerEvent.ERROR
     ),
-    PlayerEvent.BUFFERING to setOf(PlayerEvent.BUFFERED, PlayerEvent.ERROR,  PlayerEvent.VARIANT_CHANGED),
+    PlayerEvent.BUFFERING to setOf(
+        PlayerEvent.BUFFERED,
+        PlayerEvent.ERROR,
+        PlayerEvent.VARIANT_CHANGED
+    ),
     PlayerEvent.BUFFERED to setOf(
         PlayerEvent.PAUSE,
         PlayerEvent.SEEKING,
@@ -33,15 +39,20 @@ internal val validTransitions = mapOf(
         PlayerEvent.SEEKED,
         PlayerEvent.ENDED,
         PlayerEvent.ERROR,
-        PlayerEvent.VARIANT_CHANGED
     ),
-    PlayerEvent.SEEKED to setOf(PlayerEvent.PLAY, PlayerEvent.ENDED, PlayerEvent.ERROR,  PlayerEvent.VARIANT_CHANGED,
-        PlayerEvent.PLAYING, PlayerEvent.SEEKING),
+    PlayerEvent.SEEKED to setOf(
+        PlayerEvent.PLAY, PlayerEvent.ENDED, PlayerEvent.ERROR,
+    ),
     PlayerEvent.ENDED to setOf(
         PlayerEvent.PLAY,
         PlayerEvent.PAUSE,
         PlayerEvent.ERROR,
         PlayerEvent.VARIANT_CHANGED,
     ),
-    PlayerEvent.ERROR to setOf(PlayerEvent.PLAYING, PlayerEvent.PLAY, PlayerEvent.PAUSE,PlayerEvent.BUFFERED)
+    PlayerEvent.ERROR to setOf(
+        PlayerEvent.PLAYING,
+        PlayerEvent.PLAY,
+        PlayerEvent.PAUSE,
+        PlayerEvent.BUFFERED
+    )
 )

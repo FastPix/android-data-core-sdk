@@ -7,6 +7,8 @@ import java.util.UUID
 
 object SessionService {
 
+    private const val TAG = "SessionService"
+
     private var sessionId: String? = null
     private var traceId: String? = null
     private var sessionStartTime: Long? = null
@@ -34,7 +36,7 @@ object SessionService {
         isSessionValid = true
         _sessionState.postValue(true)
         Logger.log(
-            "SessionService",
+            TAG,
             "SESSION_CREATED: new analytics session started traceId=${traceId ?: "none"}"
         )
     }
@@ -45,15 +47,16 @@ object SessionService {
      */
     @Synchronized
     fun validateSession(): Boolean {
-        if (!isSessionValid || lastEventTime == null) {
-            Logger.logWarning("SessionService", "SESSION_INVALID: session missing or not initialized")
+        val last = lastEventTime
+        if (!isSessionValid || last == null) {
+            Logger.logWarning(TAG, "SESSION_INVALID: session missing or not initialized")
             return false
         }
 
         val currentTime = System.currentTimeMillis()
-        if (currentTime - lastEventTime!! >= SESSION_TIMEOUT_MS) {
+        if (currentTime - last >= SESSION_TIMEOUT_MS) {
             Logger.logWarning(
-                "SessionService",
+                TAG,
                 "SESSION_EXPIRED: inactivity exceeded timeoutMs=$SESSION_TIMEOUT_MS"
             )
             invalidateSession()
@@ -68,7 +71,7 @@ object SessionService {
      */
     private fun invalidateSession() {
         isSessionValid = false
-        Logger.logWarning("SessionService", "SESSION_INVALIDATED")
+        Logger.logWarning(TAG, "SESSION_INVALIDATED")
         sessionId = null
         traceId = null
         _sessionState.postValue(false)
@@ -79,7 +82,7 @@ object SessionService {
      */
     @Synchronized
     fun reset() {
-        Logger.log("SessionService", "SESSION_RESET")
+        Logger.log(TAG, "SESSION_RESET")
         isSessionValid = false
         sessionId = null
         traceId = null

@@ -17,13 +17,14 @@ class EventUploadWorker(
 ) : CoroutineWorker(context, params) {
 
     companion object {
+        private const val TAG = "EventUploadWorker"
         private const val MAX_BATCH_SIZE = 50
     }
 
     override suspend fun doWork(): Result {
         return try {
             Logger.log(
-                "EventUploadWorker",
+                TAG,
                 "WORK_START: workId=$id attempt=$runAttemptCount"
             )
             ensureContainerReady()
@@ -32,14 +33,14 @@ class EventUploadWorker(
 
             val allSessions = eventStore.getAllSessions()
             if (allSessions.isEmpty()) {
-                Logger.log("EventUploadWorker", "No sessions to upload")
+                Logger.log(TAG, "No sessions to upload")
                 return Result.success()
             }
-            Logger.log("EventUploadWorker", "UPLOAD_SCAN: sessions=${allSessions.size}")
+            Logger.log(TAG, "UPLOAD_SCAN: sessions=${allSessions.size}")
 
             for (session in allSessions) {
                 Logger.log(
-                    "EventUploadWorker",
+                    TAG,
                     "SESSION_UPLOAD_START: sessionId=${session.sessionId} viewId=${session.viewId} status=${session.status}"
                 )
                 while (true) {
@@ -49,7 +50,7 @@ class EventUploadWorker(
                             eventStore.deleteSessionIfEmpty(session.sessionId)
                         }
                         Logger.log(
-                            "EventUploadWorker",
+                            TAG,
                             "SESSION_UPLOAD_DONE: sessionId=${session.sessionId} noMoreEvents=true"
                         )
                         break
@@ -60,18 +61,18 @@ class EventUploadWorker(
                         events = events.map { it.second }
                     )
                     Logger.log(
-                        "EventUploadWorker",
+                        TAG,
                         "NETWORK_REQUEST_START: sessionId=${session.sessionId} batchSize=${events.size}"
                     )
 
                     val response = apiService.sendEvents(request)
                     Logger.log(
-                        "EventUploadWorker",
+                        TAG,
                         "NETWORK_REQUEST_COMPLETE: sessionId=${session.sessionId} code=${response.code()} success=${response.isSuccessful}"
                     )
                     if (!response.isSuccessful) {
                         Logger.logWarning(
-                            "EventUploadWorker",
+                            TAG,
                             "Upload failed for session=${session.sessionId}, viewId=${session.viewId}, code=${response.code()}"
                         )
                         return Result.retry()
@@ -84,13 +85,13 @@ class EventUploadWorker(
                 }
             }
 
-            Logger.log("EventUploadWorker", "WORK_COMPLETE: workId=$id result=success")
+            Logger.log(TAG, "WORK_COMPLETE: workId=$id result=success")
             Result.success()
         } catch (ce: CancellationException) {
-            Logger.logWarning("EventUploadWorker", "WORK_CANCELLED: workId=$id reason=${ce.message}")
+            Logger.logWarning(TAG, "WORK_CANCELLED: workId=$id reason=${ce.message}")
             throw ce
         } catch (e: Exception) {
-            Logger.logError("EventUploadWorker", "Upload worker failed: ${e.message}", e)
+            Logger.logError(TAG, "Upload worker failed: ${e.message}", e)
             Result.retry()
         }
     }

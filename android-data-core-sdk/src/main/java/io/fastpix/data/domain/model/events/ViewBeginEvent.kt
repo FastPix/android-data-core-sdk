@@ -75,7 +75,7 @@ class ViewBeginEvent(
     @SerialName("cm9") var cm9: String? = null,
     @SerialName("cm10") var cm10: String? = null,
     @SerialName("vdcn") var videoCDN: String? = null,
-) : BaseEvent()
+) : BaseEvent
 
 object ViewBeginEventBuilder {
 

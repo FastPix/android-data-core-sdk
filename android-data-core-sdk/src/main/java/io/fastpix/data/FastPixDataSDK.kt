@@ -41,6 +41,10 @@ val scalingTracker = ScalingTracker()
 
 class FastPixDataSDK {
 
+    companion object {
+        private const val TAG = "FastPixDataSDK"
+    }
+
     private val lifecycleState = AtomicReference(SdkLifecycleState.NOT_INITIALIZED)
     private var configuration: SDKConfiguration? = null
     private var context: Context? = null
@@ -68,7 +72,7 @@ class FastPixDataSDK {
             SdkLifecycleState.INITIALIZING -> return
             SdkLifecycleState.RELEASING, SdkLifecycleState.RELEASED -> {
                 Logger.logWarning(
-                    "FastPixDataSDK",
+                    TAG,
                     "initialize() ignored: state is ${currentState()}"
                 )
                 return
@@ -84,7 +88,7 @@ class FastPixDataSDK {
         this.configuration = config
 
         if (config.workspaceId.isBlank()) {
-            Logger.logWarning("FastPixDataSDK", "Invalid config: workspaceId is blank")
+            Logger.logWarning(TAG, "Invalid config: workspaceId is blank")
             lifecycleState.set(SdkLifecycleState.NOT_INITIALIZED)
             return
         }
@@ -105,11 +109,11 @@ class FastPixDataSDK {
         totalVisibleDurationMs = 0L
         lifecycleState.set(SdkLifecycleState.INITIALIZED)
         Logger.log(
-            "FastPixDataSDK",
+            TAG,
             "TRACE_KEY: traceId=${SessionService.getTraceId() ?: "none"} sessionId=${SessionService.getSessionId() ?: "none"} videoId=${config.videoData?.videoId ?: "none"}"
         )
         Logger.log(
-            "FastPixDataSDK",
+            TAG,
             "${Logger.SDK_INITIALIZED}: debugEnabled=${config.enableLogging && true}, videoId=${config.videoData?.videoId ?: "none"}"
         )
     }
@@ -130,8 +134,6 @@ class FastPixDataSDK {
         }
     }
 
-    private val TAG = "FastPixDataSDK"
-
     /**
      * Dispatch a player event. Events are only enqueued when state is [SdkLifecycleState.INITIALIZED].
      * Player adapters must use this only; they must not send to the network directly.
@@ -139,20 +141,20 @@ class FastPixDataSDK {
     fun dispatchEvent(event: PlayerEventType, playheadTimeOverride: Int? = null) {
         if (!currentState().isAcceptingEvents()) {
             Logger.logWarning(
-                "FastPixDataSDK",
+                TAG,
                 "EVENT_SKIPPED: sdk not accepting events, event=$event"
             )
             return
         }
         val config = configuration ?: run {
             Logger.logWarning(
-                "FastPixDataSDK",
+                TAG,
                 "EVENT_SKIPPED: missing configuration, event=$event"
             )
             return
         }
         val dispatcher = eventDispatcher ?: run {
-            Logger.logWarning("FastPixDataSDK", "EVENT_SKIPPED: missing dispatcher, event=$event")
+            Logger.logWarning(TAG, "EVENT_SKIPPED: missing dispatcher, event=$event")
             return
         }
         val videoId = config.videoData?.videoId
@@ -176,7 +178,7 @@ class FastPixDataSDK {
                     val alreadySent = sdkStateService?.sdkState?.value?.isViewBeginCalled == true
                     if (alreadySent) {
                         Logger.logWarning(
-                            "FastPixDataSDK",
+                            TAG,
                             "VIEW_BEGIN_SKIPPED: viewBegin already dispatched for viewId=${sdkStateService?.sdkState?.value?.viewId}"
                         )
                     } else {
@@ -184,7 +186,7 @@ class FastPixDataSDK {
                         lastVisibleAtMs = System.currentTimeMillis()
                         sdkStateService?.viewBeginCalled()
                         Logger.log(
-                            "FastPixDataSDK",
+                            TAG,
                             "VIEW_BEGIN_TRIGGERED: video became visible"
                         )
                         emitEvent(
@@ -357,7 +359,7 @@ class FastPixDataSDK {
             }
         } else {
             Logger.logWarning(
-                "FastPixDataSDK",
+                TAG,
                 "SESSION_RECREATED: event=$event triggered without valid session; creating new view"
             )
             SessionService.initializeSession()
@@ -389,7 +391,7 @@ class FastPixDataSDK {
             )
 
             Logger.log(
-                "FastPixDataSDK",
+                TAG,
                 "SESSION_RECREATED: new viewId=${sdkStateService?.sdkState?.value?.viewId}, re-dispatching original event=$event"
             )
             dispatchEvent(event, playheadTimeOverride)
@@ -402,7 +404,7 @@ class FastPixDataSDK {
     fun release(playheadTimeOverride: Int? = null) {
         if (currentState().isReleased()) return
         if (!currentState().canTransitionTo(SdkLifecycleState.RELEASING)) {
-            Logger.logWarning("FastPixDataSDK", "release() ignored: state is ${currentState()}")
+            Logger.logWarning(TAG, "release() ignored: state is ${currentState()}")
             return
         }
 
@@ -413,7 +415,7 @@ class FastPixDataSDK {
             totalVisibleDurationMs
         }
         Logger.log(
-            "FastPixDataSDK",
+            TAG,
             "SESSION_ENDED: reason=release visibleDurationMs=$releaseDuration totalSessionMs=${System.currentTimeMillis() - sessionCreatedAtMs}"
         )
 
@@ -421,14 +423,14 @@ class FastPixDataSDK {
             val viewCompletedEvent = ViewCompletedEventBuilder.build(it, playheadTimeOverride)
             val payload = EventJsonCodec.serialize(viewCompletedEvent)
             Logger.log(
-                "FastPixDataSDK",
+                TAG,
                 "EVENT_EMIT_BEFORE: event=viewCompleted payload=${payload ?: "serialization_failed"}"
             )
             eventDispatcher?.enqueue(viewCompletedEvent)
         }
 
         lifecycleState.set(SdkLifecycleState.RELEASING)
-        Logger.log("FastPixDataSDK", "${Logger.SDK_RELEASE_STARTED}")
+        Logger.log(TAG, "${Logger.SDK_RELEASE_STARTED}")
 
         eventDispatcher?.flushAndShutdown()
         DependencyContainer.prepareForRelease()
@@ -439,7 +441,7 @@ class FastPixDataSDK {
         context = null
 
         lifecycleState.set(SdkLifecycleState.RELEASED)
-        Logger.log("FastPixDataSDK", "${Logger.SDK_RELEASE_COMPLETED}")
+        Logger.log(TAG, "${Logger.SDK_RELEASE_COMPLETED}")
     }
 
     private fun emitEvent(
@@ -452,7 +454,7 @@ class FastPixDataSDK {
         Logger.log("EVENT_NAME_KEY", eventName)
         val payload = EventJsonCodec.serialize(eventData)
         Logger.log(
-            "FastPixDataSDK",
+            TAG,
             "EVENT_EMIT_BEFORE: event=$eventName payload=${payload ?: "serialization_failed"}",
             videoId = videoId,
             playerInstanceId = playerInstanceId
@@ -460,14 +462,14 @@ class FastPixDataSDK {
         val enqueued = dispatcher.dispatchEvent(eventData)
         if (enqueued) {
             Logger.log(
-                "FastPixDataSDK",
+                TAG,
                 "EVENT_EMIT_AFTER: event=$eventName enqueue=success",
                 videoId = videoId,
                 playerInstanceId = playerInstanceId
             )
         } else {
             Logger.logWarning(
-                "FastPixDataSDK",
+                TAG,
                 "EVENT_EMIT_FAILED: event=$eventName enqueue=false",
                 videoId = videoId,
                 playerInstanceId = playerInstanceId

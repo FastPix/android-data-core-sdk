@@ -10,16 +10,20 @@ import androidx.room.PrimaryKey
     foreignKeys = [
         ForeignKey(
             entity = SessionEntity::class,
-            parentColumns = ["sessionId"],
-            childColumns = ["sessionId"],
+            parentColumns = [EventEntity.COLUMN_SESSION_ID],
+            childColumns = [EventEntity.COLUMN_SESSION_ID],
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index(value = ["sessionId"]), Index(value = ["createdAt"])]
+    indices = [Index(value = [EventEntity.COLUMN_SESSION_ID]), Index(value = ["createdAt"])]
 )
 data class EventEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0L,
     val sessionId: String,
     val eventData: String,
     val createdAt: Long
-)
+) {
+    companion object {
+        const val COLUMN_SESSION_ID = "sessionId"
+    }
+}

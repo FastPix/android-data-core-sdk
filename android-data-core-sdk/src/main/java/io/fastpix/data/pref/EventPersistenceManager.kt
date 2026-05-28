@@ -39,6 +39,7 @@ class EventPersistenceManager(context: Context) {
         context.getSharedPreferences("fastpix_event_storage", Context.MODE_PRIVATE)
 
     companion object {
+        private const val TAG = "EventPersistenceManager"
         private const val KEY_PENDING_EVENTS = "pending_events"
         private const val KEY_EVENT_TIMESTAMP = "event_timestamp"
         private const val MAX_STORED_EVENTS = 500 // Prevent unbounded growth
@@ -57,7 +58,7 @@ class EventPersistenceManager(context: Context) {
 
             if (eventName == null) {
                 Logger.logWarning(
-                    "EventPersistenceManager",
+                    TAG,
                     "Event missing eventName field, cannot deserialize"
                 )
                 return null
@@ -97,12 +98,12 @@ class EventPersistenceManager(context: Context) {
                 )
 
                 else -> {
-                    Logger.logWarning("EventPersistenceManager", "Unknown event type: $eventName")
+                    Logger.logWarning(TAG, "Unknown event type: $eventName")
                     null
                 }
             }
         } catch (e: Exception) {
-            Logger.logError("EventPersistenceManager", "Failed to deserialize event", e)
+            Logger.logError(TAG, "Failed to deserialize event", e)
             null
         }
     }
@@ -131,7 +132,7 @@ class EventPersistenceManager(context: Context) {
             }
 
             // Convert to JSON and save using Kotlinx Serialization
-            // Serialize each event individually since BaseEvent is abstract
+            // Serialize each event individually with its concrete serializer
             val jsonArray = eventsToSave.mapNotNull { event ->
                 try {
                     when (event) {
@@ -222,7 +223,7 @@ class EventPersistenceManager(context: Context) {
 
                         else -> {
                             Logger.logWarning(
-                                "EventPersistenceManager",
+                                TAG,
                                 "Unknown event type: ${event::class.simpleName}"
                             )
                             null
@@ -230,7 +231,7 @@ class EventPersistenceManager(context: Context) {
                     }
                 } catch (e: Exception) {
                     Logger.logError(
-                        "EventPersistenceManager",
+                        TAG,
                         "Failed to serialize event: ${event::class.simpleName}",
                         e
                     )
@@ -256,7 +257,7 @@ class EventPersistenceManager(context: Context) {
                 }
             }
         } catch (e: Exception) {
-            Logger.logError("EventPersistenceManager", "Failed to save pending events", e)
+            Logger.logError(TAG, "Failed to save pending events", e)
         }
     }
 
@@ -275,7 +276,7 @@ class EventPersistenceManager(context: Context) {
                 val currentTime = System.currentTimeMillis()
 
                 if (currentTime - timestamp > MAX_EVENT_AGE_MS) {
-                    Logger.log("EventPersistenceManager", "Events are too old, clearing storage")
+                    Logger.log(TAG, "Events are too old, clearing storage")
                     clearPendingEvents()
                     emptyList()
                 } else {
@@ -288,7 +289,7 @@ class EventPersistenceManager(context: Context) {
                 }
             }
         } catch (e: Exception) {
-            Logger.logError("EventPersistenceManager", "Failed to load pending events", e)
+            Logger.logError(TAG, "Failed to load pending events", e)
             emptyList()
         }
     }
@@ -301,7 +302,7 @@ class EventPersistenceManager(context: Context) {
         prefs.edit {
             clear()
         }
-        Logger.log("EventPersistenceManager", "Cleared pending events from storage")
+        Logger.log(TAG, "Cleared pending events from storage")
     }
 
     /**
@@ -313,14 +314,14 @@ class EventPersistenceManager(context: Context) {
      */
     fun deleteEventsByViewerTimeStamps(viewerTimeStamps: Set<Long?>) {
         if (viewerTimeStamps.isEmpty()) {
-            Logger.log("EventPersistenceManager", "No viewerTimeStamps provided, nothing to delete")
+            Logger.log(TAG, "No viewerTimeStamps provided, nothing to delete")
             return
         }
 
         try {
             val allEvents = loadPendingEvents()
             if (allEvents.isEmpty()) {
-                Logger.log("EventPersistenceManager", "No events to delete")
+                Logger.log(TAG, "No events to delete")
                 return
             }
 
@@ -332,7 +333,7 @@ class EventPersistenceManager(context: Context) {
 
             val deletedCount = allEvents.size - remainingEvents.size
             Logger.log(
-                "EventPersistenceManager",
+                TAG,
                 "Deleting $deletedCount events by viewerTimeStamp, keeping ${remainingEvents.size} events"
             )
 
@@ -431,7 +432,7 @@ class EventPersistenceManager(context: Context) {
 
                             else -> {
                                 Logger.logWarning(
-                                    "EventPersistenceManager",
+                                    TAG,
                                     "Unknown event type: ${event::class.simpleName}"
                                 )
                                 null
@@ -439,7 +440,7 @@ class EventPersistenceManager(context: Context) {
                         }
                     } catch (e: Exception) {
                         Logger.logError(
-                            "EventPersistenceManager",
+                            TAG,
                             "Failed to serialize event: ${event::class.simpleName}",
                             e
                         )
@@ -454,13 +455,13 @@ class EventPersistenceManager(context: Context) {
                     commit()
                 }
                 Logger.log(
-                    "EventPersistenceManager",
+                    TAG,
                     "Deleted $deletedCount events by viewerTimeStamp, ${remainingEvents.size} events remaining"
                 )
             }
         } catch (e: Exception) {
             Logger.logError(
-                "EventPersistenceManager",
+                TAG,
                 "Failed to delete events by viewerTimeStamp",
                 e
             )

@@ -11,6 +11,7 @@ import io.fastpix.data.utils.Logger
 import java.util.concurrent.TimeUnit
 
 object EventUploadScheduler {
+    private const val TAG = "EventUploadScheduler"
     private const val UNIQUE_UPLOAD_WORK_NAME = "fastpix_event_upload"
     private const val SCHEDULER_PREFS = "fastpix_event_upload_scheduler"
     private const val KEY_ENQUEUED_ONLY_FIRST_SEEN_MS = "enqueued_only_first_seen_ms"
@@ -38,12 +39,12 @@ object EventUploadScheduler {
                 "id=${it.id},state=${it.state},attempt=${it.runAttemptCount}"
             }
             Logger.log(
-                "EventUploadScheduler",
+                TAG,
                 "WORK_ENQUEUE_REQUEST: newWorkId=${request.id} policy=$defaultPolicy existingRunning=$running existingEnqueued=$enqueued states=[$stateSummary]"
             )
             if (running + enqueued > 1) {
                 Logger.logWarning(
-                    "EventUploadScheduler",
+                    TAG,
                     "WORK_OVERLAP_DETECTED: existingRunning=$running existingEnqueued=$enqueued"
                 )
             }
@@ -54,7 +55,7 @@ object EventUploadScheduler {
                 if (firstSeen == 0L) {
                     prefs.edit().putLong(KEY_ENQUEUED_ONLY_FIRST_SEEN_MS, now).apply()
                     Logger.log(
-                        "EventUploadScheduler",
+                        TAG,
                         "WORK_PENDING_TRACKING_STARTED: enqueuedOnly=true firstSeenMs=$now timeoutMs=$STALE_ENQUEUED_TIMEOUT_MS"
                     )
                 } else {
@@ -63,7 +64,7 @@ object EventUploadScheduler {
                         effectivePolicy = ExistingWorkPolicy.APPEND
                         prefs.edit().remove(KEY_ENQUEUED_ONLY_FIRST_SEEN_MS).apply()
                         Logger.logWarning(
-                            "EventUploadScheduler",
+                            TAG,
                             "WORK_STALE_ENQUEUED_DETECTED: ageMs=$ageMs timeoutMs=$STALE_ENQUEUED_TIMEOUT_MS action=REPLACE"
                         )
                     }
@@ -72,7 +73,7 @@ object EventUploadScheduler {
                 prefs.edit().remove(KEY_ENQUEUED_ONLY_FIRST_SEEN_MS).apply()
             }
         } catch (e: Exception) {
-            Logger.logWarning("EventUploadScheduler", "WORK_INSPECTION_FAILED: ${e.message}")
+            Logger.logWarning(TAG, "WORK_INSPECTION_FAILED: ${e.message}")
         }
 
         workManager.enqueueUniqueWork(

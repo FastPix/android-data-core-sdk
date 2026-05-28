@@ -25,7 +25,7 @@ class RequestFailedEvent(
     @SerialName("rqercd") var requestError: String? = null,
     @SerialName("rqhn") var requestHostName: String? = null,
     @SerialName("rqerte") var requestErrorText: String? = null,
-) : BaseEvent()
+) : BaseEvent
 
 object RequestFailedEventBuilder {
     fun build(configService: SDKConfiguration): RequestFailedEvent {

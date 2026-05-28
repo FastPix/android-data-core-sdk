@@ -24,6 +24,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 object EventJsonCodec {
+    private const val TAG = "EventJsonCodec"
+
     fun serialize(event: BaseEvent): String? {
         return try {
             when (event) {
@@ -65,7 +67,7 @@ object EventJsonCodec {
                 else -> null
             }
         } catch (e: Exception) {
-            Logger.logError("EventJsonCodec", "Failed to serialize event", e)
+            Logger.logError(TAG, "Failed to serialize event", e)
             null
         }
     }
@@ -103,12 +105,12 @@ object EventJsonCodec {
                     jsonString
                 )
                 else -> {
-                    Logger.logWarning("EventJsonCodec", "Unknown event type: $eventName")
+                    Logger.logWarning(TAG, "Unknown event type: $eventName")
                     null
                 }
             }
         } catch (e: Exception) {
-            Logger.logError("EventJsonCodec", "Failed to deserialize event", e)
+            Logger.logError(TAG, "Failed to deserialize event", e)
             null
         }
     }

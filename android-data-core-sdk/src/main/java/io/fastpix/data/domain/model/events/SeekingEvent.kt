@@ -26,7 +26,7 @@ class SeekingEvent(
     @SerialName("vemadopg") var viewMaxDownScalePercentage: Double? = null,
     @SerialName("vetlug") var viewTotalUpScaling: Double? = null,
     @SerialName("vetldg") var viewTotalDownScaling: Double? = null,
-) : BaseEvent()
+) : BaseEvent
 
 object SeekingEventBuilder {
 

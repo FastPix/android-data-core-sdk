@@ -31,7 +31,7 @@ class PlayEvent(
     @SerialName("rqvdht") var videoHeight: String? = null,
     @SerialName("vdsour") var videoSourceUrl: String? = null,
     @SerialName("vdsohn") var videoHostName: String? = null,
-) : BaseEvent()
+) : BaseEvent
 
 
 object PlayEventBuilder {

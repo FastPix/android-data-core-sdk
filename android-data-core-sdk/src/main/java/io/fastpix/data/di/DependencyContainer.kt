@@ -35,6 +35,8 @@ import okhttp3.Interceptor
 @SuppressLint("StaticFieldLeak")
 object DependencyContainer {
 
+    private const val TAG = "DependencyContainer"
+
     private var context: Context? = null
     private var isInitialized = false
 
@@ -57,13 +59,13 @@ object DependencyContainer {
      */
     fun initialize(context: Context) {
         if (isInitialized) {
-            Logger.logWarning("DependencyContainer", "Already initialized")
+            Logger.logWarning(TAG, "Already initialized")
             return
         }
 
         this.context = context.applicationContext
         isInitialized = true
-        Logger.log("DependencyContainer", "Initialized successfully")
+        Logger.log(TAG, "Initialized successfully")
     }
 
     /**
@@ -78,38 +80,33 @@ object DependencyContainer {
      * Get OkHttpClient instance
      */
     fun getOkHttpClient(): OkHttpClient {
-        if (_okHttpClient == null) {
-            val loggingInterceptor = HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY /*if (Logger.isLoggingEnabled()) {
-
-                } else {
-                    HttpLoggingInterceptor.Level.BASIC
-                }*/
-            }
-
-            // User-Agent interceptor to set proper Android user agent
-            val userAgentInterceptor = Interceptor { chain ->
-                val request = chain.request()
-                val vmVersion = System.getProperty("java.vm.version")
-                val userAgent =
-                    "Dalvik/${vmVersion} (Linux; U; Android ${Build.VERSION.RELEASE}; ${Build.MODEL} Build/${Build.ID})"
-
-                val newRequest = request.newBuilder()
-                    .header("User-Agent", userAgent)
-                    .build()
-
-                chain.proceed(newRequest)
-            }
-
-            _okHttpClient = OkHttpClient.Builder()
-                .addInterceptor(loggingInterceptor)
-                .addInterceptor(userAgentInterceptor)
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(30, TimeUnit.SECONDS)
-                .writeTimeout(30, TimeUnit.SECONDS)
-                .build()
+        _okHttpClient?.let { return it }
+        val loggingInterceptor = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
         }
-        return _okHttpClient!!
+
+        // User-Agent interceptor to set proper Android user agent
+        val userAgentInterceptor = Interceptor { chain ->
+            val request = chain.request()
+            val vmVersion = System.getProperty("java.vm.version")
+            val userAgent =
+                "Dalvik/${vmVersion} (Linux; U; Android ${Build.VERSION.RELEASE}; ${Build.MODEL} Build/${Build.ID})"
+
+            val newRequest = request.newBuilder()
+                .header("User-Agent", userAgent)
+                .build()
+
+            chain.proceed(newRequest)
+        }
+
+        return OkHttpClient.Builder()
+            .addInterceptor(loggingInterceptor)
+            .addInterceptor(userAgentInterceptor)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+            .also { _okHttpClient = it }
     }
 
     fun getViewerPref(): ViewerPrefs? {
@@ -123,43 +120,36 @@ object DependencyContainer {
      * Get EventPersistenceManager instance
      */
     fun getEventPersistenceManager(): EventPersistenceManager {
-        if (_eventPersistenceManager == null) {
-            _eventPersistenceManager = EventPersistenceManager(getContext())
-        }
-        return _eventPersistenceManager!!
+        return _eventPersistenceManager
+            ?: EventPersistenceManager(getContext()).also { _eventPersistenceManager = it }
     }
 
     fun getAnalyticsDatabase(): AnalyticsDatabase {
-        if (_analyticsDatabase == null) {
-            _analyticsDatabase = Room.databaseBuilder(
-                getContext(),
-                AnalyticsDatabase::class.java,
-                "fastpix_analytics.db"
-            ).build()
-        }
-        return _analyticsDatabase!!
+        return _analyticsDatabase ?: Room.databaseBuilder(
+            getContext(),
+            AnalyticsDatabase::class.java,
+            "fastpix_analytics.db"
+        ).build().also { _analyticsDatabase = it }
     }
 
     fun getEventStore(): EventStore {
-        if (_eventStore == null) {
-            _eventStore = EventStore(getAnalyticsDatabase(), getEventPersistenceManager())
-        }
-        return _eventStore!!
+        return _eventStore
+            ?: EventStore(getAnalyticsDatabase(), getEventPersistenceManager())
+                .also { _eventStore = it }
     }
 
     /**
      * Get Retrofit instance
      */
     fun getRetrofit(): Retrofit {
-        if (_retrofit == null) {
-            val contentType = "application/json".toMediaType()
-            _retrofit = Retrofit.Builder()
-                .baseUrl(SDKBuildConfig.SDK_URL) // Replace with your actual API base URL
-                .client(getOkHttpClient())
-                .addConverterFactory(JsonSerializer.json.asConverterFactory(contentType))
-                .build()
-        }
-        return _retrofit!!
+        _retrofit?.let { return it }
+        val contentType = "application/json".toMediaType()
+        return Retrofit.Builder()
+            .baseUrl(SDKBuildConfig.SDK_URL) // Replace with your actual API base URL
+            .client(getOkHttpClient())
+            .addConverterFactory(JsonSerializer.json.asConverterFactory(contentType))
+            .build()
+            .also { _retrofit = it }
     }
 
 
@@ -176,64 +166,49 @@ object DependencyContainer {
      * Get EventApiService instance
      */
     fun getEventApiService(): EventApiService {
-        if (_eventApiService == null) {
-            _eventApiService = getRetrofit().create(EventApiService::class.java)
-        }
-        return _eventApiService!!
+        return _eventApiService
+            ?: getRetrofit().create(EventApiService::class.java)
+                .also { _eventApiService = it }
     }
 
     /**
      * Get NetworkTracker instance
      */
     fun getNetworkTracker(): NetworkTracker {
-        if (_networkTracker == null) {
-            _networkTracker = NetworkTracker(getContext())
-        }
-        return _networkTracker!!
+        return _networkTracker ?: NetworkTracker(getContext()).also { _networkTracker = it }
     }
 
     /**
      * Get SDKStateService instance
      */
     fun getSDKStateService(): SDKStateService {
-        if (_sdkStateService == null) {
-            _sdkStateService = SDKStateService()
-        }
-        return _sdkStateService!!
+        return _sdkStateService ?: SDKStateService().also { _sdkStateService = it }
     }
 
     /**
      * Get EventDataCalculator instance
      */
     fun getEventDataCalculator(): EventDataCalculator {
-        if (_eventDataCalculator == null) {
-            _eventDataCalculator = EventDataCalculator()
-        }
-        return _eventDataCalculator!!
+        return _eventDataCalculator ?: EventDataCalculator().also { _eventDataCalculator = it }
     }
 
     /**
      * Get DeviceInfoUtility instance
      */
     fun getDeviceInfoUtility(): DeviceInfoUtility {
-        if (_deviceInfoUtility == null) {
-            _deviceInfoUtility = DeviceInfoUtility(getContext())
-        }
-        return _deviceInfoUtility!!
+        return _deviceInfoUtility
+            ?: DeviceInfoUtility(getContext()).also { _deviceInfoUtility = it }
     }
 
     /**
      * Get EventDispatcher instance
      */
     fun getEventDispatcher(): EventDispatcher {
-        if (_eventDispatcher == null) {
-            _eventDispatcher = EventDispatcher(
-                getEventApiService(),
-                getNetworkTracker(),
-                getContext()
-            )
-        }
-        return _eventDispatcher!!
+        return _eventDispatcher ?: EventDispatcher(
+            getEventApiService(),
+            getNetworkTracker(),
+            getContext()
+        ).also { _eventDispatcher = it }
     }
 
     /**
@@ -245,7 +220,7 @@ object DependencyContainer {
     fun prepareForRelease() {
         if (!isInitialized) {
             Logger.logWarning(
-                "DependencyContainer",
+                TAG,
                 "prepareForRelease called before initialization"
             )
             return
@@ -259,7 +234,7 @@ object DependencyContainer {
         _eventStore = null
         SessionService.reset()
         scalingTracker.reset()
-        Logger.log("DependencyContainer", "Prepared for release - instances cleared")
+        Logger.log(TAG, "Prepared for release - instances cleared")
     }
 
     /**
@@ -284,6 +259,6 @@ object DependencyContainer {
         _eventStore = null
         context = null
         isInitialized = false
-        Logger.log("DependencyContainer", "Reset completed")
+        Logger.log(TAG, "Reset completed")
     }
 }

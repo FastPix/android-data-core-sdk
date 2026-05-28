@@ -5,46 +5,44 @@ import io.fastpix.data.domain.wallclock.ViewWatchCounter
 import io.fastpix.data.utils.Utils
 import io.fastpix.data.di.DependencyContainer
 import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 
 
-@Serializable
-abstract class BaseEvent {
+interface BaseEvent {
     @SerialName("wsid")
-    abstract val workSpaceId: String?
+    val workSpaceId: String?
 
     @SerialName("veid")
-    abstract val viewId: String?
+    val viewId: String?
 
     @SerialName("vesqnu")
-    abstract val viewSequenceNumber: String?
+    val viewSequenceNumber: String?
 
     @SerialName("plsqnu")
-    abstract val playerSequenceNumber: Int?
+    val playerSequenceNumber: Int?
 
     @SerialName("bedn")
-    abstract val beaconDomain: String?
+    val beaconDomain: String?
 
     @SerialName("plphti")
-    abstract val playheadTime: Int?
+    val playheadTime: Int?
 
     @SerialName("vitp")
-    abstract val viewerTimeStamp: Long?
+    val viewerTimeStamp: Long?
 
     @SerialName("plinid")
-    abstract val playerInstanceId: String?
+    val playerInstanceId: String?
 
     @SerialName("vewati")
-    abstract val viewWatchTime: String?
+    val viewWatchTime: String?
 
     @SerialName("vicity")
-    abstract val connectionType: String?
+    val connectionType: String?
 
     @SerialName("evna")
-    abstract var eventName: String?
+    var eventName: String?
 
     @SerialName("plisfl")
-    abstract var isPlayerFullScreen: String?
+    var isPlayerFullScreen: String?
 }
 
 

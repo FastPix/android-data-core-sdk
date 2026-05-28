@@ -36,6 +36,7 @@ class EventDispatcher(
     private val context: android.content.Context
 ) {
     companion object {
+        private const val TAG = "EventDispatcher"
         private const val DRAIN_CHUNK_SIZE = 100
         private const val UPLOAD_INTERVAL_MS = 10_000L
         private const val UPLOAD_BATCH_SIZE = 50
@@ -63,15 +64,15 @@ class EventDispatcher(
      */
     fun enqueue(event: BaseEvent): Boolean {
         if (isShuttingDown.get()) {
-            Logger.logWarning("EventDispatcher", "EVENT_ENQUEUE_SKIPPED: dispatcher shutting down")
+            Logger.logWarning(TAG, "EVENT_ENQUEUE_SKIPPED: dispatcher shutting down")
             return false
         }
         if (!eventQueue.enqueue(event)) {
-            Logger.logWarning("EventDispatcher", "EVENT_ENQUEUE_SKIPPED: queue closed event=${event.eventName}")
+            Logger.logWarning(TAG, "EVENT_ENQUEUE_SKIPPED: queue closed event=${event.eventName}")
             return false
         }
         Logger.log(
-            "EventDispatcher",
+            TAG,
             "${Logger.EVENT_ENQUEUED}: ${event.eventName} queueSize=${eventQueue.size}"
         )
         return true
@@ -90,10 +91,10 @@ class EventDispatcher(
                 val was = isNetworkAvailable.get()
                 isNetworkAvailable.set(available)
                 if (!was && available) {
-                    Logger.log("EventDispatcher", "Network restored, scheduling upload worker")
+                    Logger.log(TAG, "Network restored, scheduling upload worker")
                     EventUploadScheduler.schedule(context)
                 } else if (was && !available) {
-                    Logger.logWarning("EventDispatcher", "Network lost, events will stay in Room")
+                    Logger.logWarning(TAG, "Network lost, events will stay in Room")
                 }
             }
         }
@@ -109,7 +110,7 @@ class EventDispatcher(
                     eventQueue.drainTo(drained, DRAIN_CHUNK_SIZE)
                     if (drained.isNotEmpty()) {
                         drained.forEach { eventStore.onNewEvent(it) }
-                        Logger.log("EventDispatcher", "${Logger.EVENT_BATCHED}: ${drained.size} events")
+                        Logger.log(TAG, "${Logger.EVENT_BATCHED}: ${drained.size} events")
                         EventUploadScheduler.schedule(context)
                     }
 
@@ -117,7 +118,7 @@ class EventDispatcher(
                 } catch (e: CancellationException) {
                     break
                 } catch (e: Exception) {
-                    Logger.logError("EventDispatcher", "Pipeline error", e)
+                    Logger.logError(TAG, "Pipeline error", e)
                     delay(1000)
                 }
             }
@@ -134,7 +135,7 @@ class EventDispatcher(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    Logger.logError("EventDispatcher", "Periodic upload failed", e)
+                    Logger.logError(TAG, "Periodic upload failed", e)
                 }
             }
         }
@@ -161,14 +162,14 @@ class EventDispatcher(
                     events = events.map { it.second }
                 )
                 Logger.log(
-                    "EventDispatcher",
+                    TAG,
                     "PERIODIC_UPLOAD: sessionId=${session.sessionId} batchSize=${events.size}"
                 )
 
                 val response = eventApiService.sendEvents(request)
                 if (!response.isSuccessful) {
                     Logger.logWarning(
-                        "EventDispatcher",
+                        TAG,
                         "PERIODIC_UPLOAD_FAILED: sessionId=${session.sessionId} code=${response.code()}"
                     )
                     return
@@ -176,7 +177,7 @@ class EventDispatcher(
 
                 eventStore.deleteUploadedEvents(events.map { it.first })
                 Logger.log(
-                    "EventDispatcher",
+                    TAG,
                     "PERIODIC_UPLOAD_SUCCESS: sessionId=${session.sessionId} uploaded=${events.size}"
                 )
             }
@@ -189,7 +190,7 @@ class EventDispatcher(
      */
     fun flushAndShutdown() {
         if (isShuttingDown.getAndSet(true)) return
-        Logger.log("EventDispatcher", "${Logger.SDK_RELEASE_STARTED}: flushing and shutting down")
+        Logger.log(TAG, "${Logger.SDK_RELEASE_STARTED}: flushing and shutting down")
         runBlocking(Dispatchers.IO) {
             uploadJob?.cancel()
             pipelineJob?.cancel()
@@ -203,14 +204,14 @@ class EventDispatcher(
             try {
                 uploadPendingEvents()
             } catch (e: Exception) {
-                Logger.logError("EventDispatcher", "Final upload attempt failed", e)
+                Logger.logError(TAG, "Final upload attempt failed", e)
             }
 
             eventStore.markActiveSessionsCompleted()
             EventUploadScheduler.schedule(context)
             analyticsJob.cancel()
         }
-        Logger.log("EventDispatcher", "${Logger.SDK_RELEASE_COMPLETED}")
+        Logger.log(TAG, "${Logger.SDK_RELEASE_COMPLETED}")
     }
 
     /**
@@ -223,9 +224,9 @@ class EventDispatcher(
     fun cleanThroughWorkManager(onCleanUpDone: (() -> Unit)? = null) {
         try {
             EventUploadScheduler.schedule(context)
-            Logger.log("EventDispatcher", "Event upload worker scheduled")
+            Logger.log(TAG, "Event upload worker scheduled")
         } catch (e: Exception) {
-            Logger.logError("EventDispatcher", "Failed to schedule upload via WorkManager", e)
+            Logger.logError(TAG, "Failed to schedule upload via WorkManager", e)
         }
         onCleanUpDone?.invoke()
     }

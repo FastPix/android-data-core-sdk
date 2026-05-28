@@ -6,6 +6,11 @@ import io.fastpix.data.utils.Logger
 import io.fastpix.data.di.DependencyContainer
 
 class EventDataCalculator {
+
+    companion object {
+        private const val TAG = "EventDataCalculator"
+    }
+
     private val sdkStateService: SDKStateService by lazy {
         DependencyContainer.getSDKStateService()
     }
@@ -35,7 +40,7 @@ class EventDataCalculator {
     fun onBufferingEvent() {
         bufferingStartTime = System.currentTimeMillis()
         bufferCount++
-        Logger.log("EventDataCalculator", "Buffering started. Count: $bufferCount")
+        Logger.log(TAG, "Buffering started. Count: $bufferCount")
     }
 
     /**
@@ -47,7 +52,7 @@ class EventDataCalculator {
             totalBufferDuration += duration
             bufferingStartTime = null
             Logger.log(
-                "EventDataCalculator",
+                TAG,
                 "Buffering ended. Duration: ${duration}ms, Total: ${totalBufferDuration}ms"
             )
         }
@@ -59,7 +64,7 @@ class EventDataCalculator {
     fun onSeekingEvent() {
         seekingStartTime = System.currentTimeMillis()
         seekCount++
-        Logger.log("EventDataCalculator", "Seeking started. Count: $seekCount")
+        Logger.log(TAG, "Seeking started. Count: $seekCount")
     }
 
     /**
@@ -70,7 +75,7 @@ class EventDataCalculator {
 
             val duration = System.currentTimeMillis() - startTime
             Logger.log(
-                "EventDataCalculator",
+                TAG,
                 "Seeking ended. Duration: Start Time $startTime ${System.currentTimeMillis()}"
             )
             totalSeekDuration += duration
@@ -79,7 +84,7 @@ class EventDataCalculator {
             }
             seekingStartTime = null
             Logger.log(
-                "EventDataCalculator",
+                TAG,
                 "Seeking ended. Duration: ${duration}ms, Total: ${totalSeekDuration}ms, Max: ${maxSeekDuration}ms"
             )
         }
@@ -185,11 +190,15 @@ class EventDataCalculator {
         longPlayerPlayHeadTime?.let { playerPlayHeadTime ->
             val changedTime = (localUpdateTime ?: 0) - playerPlayHeadTime
 
-            if (changedTime >= 0L && (playerListenerState?.videoSourceWidth()!=null && playerListenerState.videoSourceHeight() !=null)
-                && (playerListenerState.playerWidth() != null && playerListenerState.playerHeight() != null)) {
+            val playerWidth = playerListenerState?.playerWidth()
+            val playerHeight = playerListenerState?.playerHeight()
+            val videoWidth = playerListenerState?.videoSourceWidth()
+            val videoHeight = playerListenerState?.videoSourceHeight()
+            if (changedTime >= 0L && playerWidth != null && playerHeight != null
+                && videoWidth != null && videoHeight != null) {
                 // Calculate scaling ratios - equivalent to Java function logic
-                val widthOfSourceWidth = playerListenerState.playerWidth()!! / playerListenerState.videoSourceWidth()!!
-                val heightOfSourceHeight = playerListenerState.playerHeight()!! / playerListenerState.videoSourceHeight()!!
+                val widthOfSourceWidth = playerWidth / videoWidth
+                val heightOfSourceHeight = playerHeight / videoHeight
                 val minDifferenceFeatherweight = minOf(widthOfSourceWidth, heightOfSourceHeight)
                 val maxCalculationOfValue = maxOf(0.0, minDifferenceFeatherweight - 1.0)
                 val calumniationOfValue1 = maxOf(0.0, 1.0 - minDifferenceFeatherweight)
@@ -204,7 +213,7 @@ class EventDataCalculator {
                 incrementOfMaxMindChangedValue1 += calumniationOfValue1 * changedTime
 
                 Logger.log(
-                    "EventDataCalculator",
+                    TAG,
                     "View metrics calculated - changedTime: $changedTime, maxValue: $mathMaxValue, maxValue1: $mathMaxValue1"
                 )
 
@@ -308,6 +317,6 @@ class EventDataCalculator {
         incrementOfMaxAndChangedValue = 0.0
         incrementOfMaxMindChangedValue1 = 0.0
 
-        Logger.log("EventDataCalculator", "All counters and durations reset")
+        Logger.log(TAG, "All counters and durations reset")
     }
 }
