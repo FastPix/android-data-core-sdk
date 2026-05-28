@@ -28,7 +28,7 @@ import kotlin.reflect.KClass
 object EventJsonCodec {
     private const val TAG = "EventJsonCodec"
 
-    private class Binding(
+    private data class Binding(
         val eventName: String,
         val klass: KClass<out BaseEvent>,
         val serializer: KSerializer<out BaseEvent>
