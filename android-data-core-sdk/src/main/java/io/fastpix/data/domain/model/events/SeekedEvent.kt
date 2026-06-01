@@ -24,7 +24,7 @@ class SeekedEvent(
     @SerialName("vesedu") var viewSeekDuration: Long? = null,
     @SerialName("vemaseti") var viewMaxSeekDuration: Long? = null,
     @SerialName("veseco") var viewSeekCount: String? = null,
-) : BaseEvent()
+) : BaseEvent
 
 object SeekedEventBuilder {
 

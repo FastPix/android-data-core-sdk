@@ -41,6 +41,10 @@ val scalingTracker = ScalingTracker()
 
 class FastPixDataSDK {
 
+    companion object {
+        private const val TAG = "FastPixDataSDK"
+    }
+
     private val lifecycleState = AtomicReference(SdkLifecycleState.NOT_INITIALIZED)
     private var configuration: SDKConfiguration? = null
     private var context: Context? = null
@@ -68,7 +72,7 @@ class FastPixDataSDK {
             SdkLifecycleState.INITIALIZING -> return
             SdkLifecycleState.RELEASING, SdkLifecycleState.RELEASED -> {
                 Logger.logWarning(
-                    "FastPixDataSDK",
+                    TAG,
                     "initialize() ignored: state is ${currentState()}"
                 )
                 return
@@ -84,7 +88,7 @@ class FastPixDataSDK {
         this.configuration = config
 
         if (config.workspaceId.isBlank()) {
-            Logger.logWarning("FastPixDataSDK", "Invalid config: workspaceId is blank")
+            Logger.logWarning(TAG, "Invalid config: workspaceId is blank")
             lifecycleState.set(SdkLifecycleState.NOT_INITIALIZED)
             return
         }
@@ -105,11 +109,11 @@ class FastPixDataSDK {
         totalVisibleDurationMs = 0L
         lifecycleState.set(SdkLifecycleState.INITIALIZED)
         Logger.log(
-            "FastPixDataSDK",
+            TAG,
             "TRACE_KEY: traceId=${SessionService.getTraceId() ?: "none"} sessionId=${SessionService.getSessionId() ?: "none"} videoId=${config.videoData?.videoId ?: "none"}"
         )
         Logger.log(
-            "FastPixDataSDK",
+            TAG,
             "${Logger.SDK_INITIALIZED}: debugEnabled=${config.enableLogging && true}, videoId=${config.videoData?.videoId ?: "none"}"
         )
     }
@@ -130,7 +134,103 @@ class FastPixDataSDK {
         }
     }
 
-    private val TAG = "FastPixDataSDK"
+    private data class EventDispatchSpec(
+        val eventName: String,
+        val build: (SDKConfiguration, Int?) -> io.fastpix.data.domain.model.events.BaseEvent,
+        val sideEffect: () -> Unit
+    )
+
+    private val eventDispatchTable: Map<PlayerEventType, EventDispatchSpec> by lazy {
+        mapOf(
+            PlayerEventType.play to EventDispatchSpec(
+                "play",
+                { c, _ -> PlayEventBuilder.build(c) },
+                { ViewWatchCounter.start(); lastVisibleAtMs = System.currentTimeMillis() }
+            ),
+            PlayerEventType.playerReady to EventDispatchSpec(
+                "playerReady",
+                { c, _ -> PlayerReadyEventBuilder.build(c) },
+                { ViewWatchCounter.start() }
+            ),
+            PlayerEventType.seeked to EventDispatchSpec(
+                "seeked",
+                { c, o -> SeekedEventBuilder.build(c, o) },
+                {}
+            ),
+            PlayerEventType.variantChanged to EventDispatchSpec(
+                "variantChanged",
+                { c, _ -> VariantChangedEventBuilder.build(c) },
+                {}
+            ),
+            PlayerEventType.playing to EventDispatchSpec(
+                "playing",
+                { c, _ -> PlayingEventBuilder.build(c) },
+                { ViewWatchCounter.start() }
+            ),
+            PlayerEventType.seeking to EventDispatchSpec(
+                "seeking",
+                { c, o -> SeekingEventBuilder.build(c, o) },
+                {}
+            ),
+            PlayerEventType.pause to EventDispatchSpec(
+                "pause",
+                { c, o -> PauseEventBuilder.build(c, o) },
+                ::onPauseSideEffect
+            ),
+            PlayerEventType.buffering to EventDispatchSpec(
+                "buffering_start",
+                { c, _ -> BufferingEventBuilder.build(c) },
+                { ViewWatchCounter.start() }
+            ),
+            PlayerEventType.buffered to EventDispatchSpec(
+                "buffering_end",
+                { c, _ -> BufferedEventBuilder.build(c) },
+                {}
+            ),
+            PlayerEventType.ended to EventDispatchSpec(
+                "ended",
+                { c, o -> EndedEventBuilder.build(c, o) },
+                { ViewWatchCounter.pause() }
+            ),
+            PlayerEventType.viewCompleted to EventDispatchSpec(
+                "viewCompleted",
+                { c, _ -> ViewCompletedEventBuilder.build(c) },
+                {}
+            ),
+            PlayerEventType.error to EventDispatchSpec(
+                "error",
+                { c, _ -> ErrorEventBuilder.build(c) },
+                {}
+            ),
+            PlayerEventType.requestCanceled to EventDispatchSpec(
+                "requestCanceled",
+                { c, _ -> RequestCancelledEventBuilder.build(c) },
+                {}
+            ),
+            PlayerEventType.requestFailed to EventDispatchSpec(
+                "requestFailed",
+                { c, _ -> RequestFailedEventBuilder.build(c) },
+                {}
+            ),
+            PlayerEventType.requestCompleted to EventDispatchSpec(
+                "requestCompleted",
+                { c, _ -> RequestCompletedEventBuilder.build(c) },
+                {}
+            ),
+            PlayerEventType.pulse to EventDispatchSpec(
+                "pulse",
+                { c, _ -> PulseEventBuilder.build(c) },
+                {}
+            ),
+        )
+    }
+
+    private fun onPauseSideEffect() {
+        ViewWatchCounter.pause()
+        if (lastVisibleAtMs > 0L) {
+            totalVisibleDurationMs += (System.currentTimeMillis() - lastVisibleAtMs).coerceAtLeast(0L)
+        }
+    }
 
     /**
      * Dispatch a player event. Events are only enqueued when state is [SdkLifecycleState.INITIALIZED].
@@ -138,262 +238,112 @@ class FastPixDataSDK {
      */
     fun dispatchEvent(event: PlayerEventType, playheadTimeOverride: Int? = null) {
         if (!currentState().isAcceptingEvents()) {
-            Logger.logWarning(
-                "FastPixDataSDK",
-                "EVENT_SKIPPED: sdk not accepting events, event=$event"
-            )
+            Logger.logWarning(TAG, "EVENT_SKIPPED: sdk not accepting events, event=$event")
             return
         }
         val config = configuration ?: run {
-            Logger.logWarning(
-                "FastPixDataSDK",
-                "EVENT_SKIPPED: missing configuration, event=$event"
-            )
+            Logger.logWarning(TAG, "EVENT_SKIPPED: missing configuration, event=$event")
             return
         }
         val dispatcher = eventDispatcher ?: run {
-            Logger.logWarning("FastPixDataSDK", "EVENT_SKIPPED: missing dispatcher, event=$event")
+            Logger.logWarning(TAG, "EVENT_SKIPPED: missing dispatcher, event=$event")
             return
         }
+
+        if (!SessionService.validateSession()) {
+            handleSessionRecreation(event, playheadTimeOverride, config, dispatcher)
+            return
+        }
+
         val videoId = config.videoData?.videoId
         val playerInstanceId = sdkStateService?.sdkState?.value?.playerId
 
-        if (SessionService.validateSession()) {
-            when (event) {
-                PlayerEventType.play -> {
-                    ViewWatchCounter.start()
-                    lastVisibleAtMs = System.currentTimeMillis()
-                    emitEvent(
-                        dispatcher,
-                        PlayEventBuilder.build(config),
-                        "play",
-                        videoId,
-                        playerInstanceId
-                    )
-                }
-
-                PlayerEventType.viewBegin -> {
-                    val alreadySent = sdkStateService?.sdkState?.value?.isViewBeginCalled == true
-                    if (alreadySent) {
-                        Logger.logWarning(
-                            "FastPixDataSDK",
-                            "VIEW_BEGIN_SKIPPED: viewBegin already dispatched for viewId=${sdkStateService?.sdkState?.value?.viewId}"
-                        )
-                    } else {
-                        ViewWatchCounter.start()
-                        lastVisibleAtMs = System.currentTimeMillis()
-                        sdkStateService?.viewBeginCalled()
-                        Logger.log(
-                            "FastPixDataSDK",
-                            "VIEW_BEGIN_TRIGGERED: video became visible"
-                        )
-                        emitEvent(
-                            dispatcher,
-                            ViewBeginEventBuilder.build(config),
-                            "viewBegin",
-                            videoId,
-                            playerInstanceId
-                        )
-                    }
-                }
-
-                PlayerEventType.playerReady -> {
-                    ViewWatchCounter.start()
-                    emitEvent(
-                        dispatcher,
-                        PlayerReadyEventBuilder.build(config),
-                        "playerReady",
-                        videoId,
-                        playerInstanceId
-                    )
-                }
-
-                PlayerEventType.seeked -> {
-                    emitEvent(
-                        dispatcher,
-                        SeekedEventBuilder.build(config, playheadTimeOverride),
-                        "seeked",
-                        videoId,
-                        playerInstanceId
-                    )
-                }
-
-                PlayerEventType.variantChanged -> {
-                    emitEvent(
-                        dispatcher,
-                        VariantChangedEventBuilder.build(config),
-                        "variantChanged",
-                        videoId,
-                        playerInstanceId
-                    )
-                }
-
-                PlayerEventType.playing -> {
-                    ViewWatchCounter.start()
-                    emitEvent(
-                        dispatcher,
-                        PlayingEventBuilder.build(config),
-                        "playing",
-                        videoId,
-                        playerInstanceId
-                    )
-                }
-
-                PlayerEventType.seeking -> {
-                    val seekingEvent = if (playheadTimeOverride != null) {
-                        SeekingEventBuilder.build(config, playheadTimeOverride)
-                    } else {
-                        SeekingEventBuilder.build(config)
-                    }
-                    emitEvent(dispatcher, seekingEvent, "seeking", videoId, playerInstanceId)
-                }
-
-                PlayerEventType.pause -> {
-                    ViewWatchCounter.pause()
-                    if (lastVisibleAtMs > 0L) {
-                        totalVisibleDurationMs += (System.currentTimeMillis() - lastVisibleAtMs).coerceAtLeast(
-                            0L
-                        )
-                    }
-                    val pauseEvent = if (playheadTimeOverride != null) {
-                        PauseEventBuilder.build(config, playheadTimeOverride)
-                    } else {
-                        PauseEventBuilder.build(config)
-                    }
-                    emitEvent(dispatcher, pauseEvent, "pause", videoId, playerInstanceId)
-                }
-
-                PlayerEventType.buffering -> {
-                    ViewWatchCounter.start()
-                    emitEvent(
-                        dispatcher,
-                        BufferingEventBuilder.build(config),
-                        "buffering_start",
-                        videoId,
-                        playerInstanceId
-                    )
-                }
-
-                PlayerEventType.buffered -> {
-                    emitEvent(
-                        dispatcher,
-                        BufferedEventBuilder.build(config),
-                        "buffering_end",
-                        videoId,
-                        playerInstanceId
-                    )
-                }
-
-                PlayerEventType.ended -> {
-                    ViewWatchCounter.pause()
-                    emitEvent(
-                        dispatcher,
-                        EndedEventBuilder.build(config, playheadTimeOverride),
-                        "ended",
-                        videoId,
-                        playerInstanceId
-                    )
-                }
-
-                PlayerEventType.viewCompleted -> {
-                    emitEvent(
-                        dispatcher,
-                        ViewCompletedEventBuilder.build(config),
-                        "viewCompleted",
-                        videoId,
-                        playerInstanceId
-                    )
-                }
-
-                PlayerEventType.error -> {
-                    emitEvent(
-                        dispatcher,
-                        ErrorEventBuilder.build(config),
-                        "error",
-                        videoId,
-                        playerInstanceId
-                    )
-                }
-
-                PlayerEventType.requestCanceled -> {
-                    emitEvent(
-                        dispatcher,
-                        RequestCancelledEventBuilder.build(config),
-                        "requestCanceled",
-                        videoId,
-                        playerInstanceId
-                    )
-                }
-
-                PlayerEventType.requestFailed -> {
-                    emitEvent(
-                        dispatcher,
-                        RequestFailedEventBuilder.build(config),
-                        "requestFailed",
-                        videoId,
-                        playerInstanceId
-                    )
-                }
-
-                PlayerEventType.requestCompleted -> {
-                    emitEvent(
-                        dispatcher,
-                        RequestCompletedEventBuilder.build(config),
-                        "requestCompleted",
-                        videoId,
-                        playerInstanceId
-                    )
-                }
-
-                PlayerEventType.pulse -> {
-                    emitEvent(
-                        dispatcher,
-                        PulseEventBuilder.build(config),
-                        "pulse",
-                        videoId,
-                        playerInstanceId
-                    )
-                }
-            }
-        } else {
-            Logger.logWarning(
-                "FastPixDataSDK",
-                "SESSION_RECREATED: event=$event triggered without valid session; creating new view"
-            )
-            SessionService.initializeSession()
-            sdkStateService?.clearSdkState()
-            configuration?.let { sdkStateService?.updateSDKConfiguration(it) }
-            ViewWatchCounter.reset()
-            ViewWatchCounter.start()
-            sessionCreatedAtMs = System.currentTimeMillis()
-            lastVisibleAtMs = sessionCreatedAtMs
-            totalVisibleDurationMs = 0L
-
-            val newVideoId = config.videoData?.videoId
-            val newPlayerInstanceId = sdkStateService?.sdkState?.value?.playerId
-
-            sdkStateService?.viewBeginCalled()
-            emitEvent(
-                dispatcher,
-                PlayerReadyEventBuilder.build(config),
-                "playerReady",
-                newVideoId,
-                newPlayerInstanceId
-            )
-            emitEvent(
-                dispatcher,
-                ViewBeginEventBuilder.build(config),
-                "viewBegin",
-                newVideoId,
-                newPlayerInstanceId
-            )
-
-            Logger.log(
-                "FastPixDataSDK",
-                "SESSION_RECREATED: new viewId=${sdkStateService?.sdkState?.value?.viewId}, re-dispatching original event=$event"
-            )
-            dispatchEvent(event, playheadTimeOverride)
+        if (event == PlayerEventType.viewBegin) {
+            handleViewBegin(config, dispatcher, videoId, playerInstanceId)
+            return
         }
+
+        val spec = eventDispatchTable[event] ?: return
+        spec.sideEffect()
+        emitEvent(
+            dispatcher,
+            spec.build(config, playheadTimeOverride),
+            spec.eventName,
+            videoId,
+            playerInstanceId
+        )
+    }
+
+    private fun handleViewBegin(
+        config: SDKConfiguration,
+        dispatcher: EventDispatcher,
+        videoId: String?,
+        playerInstanceId: String?
+    ) {
+        val alreadySent = sdkStateService?.sdkState?.value?.isViewBeginCalled == true
+        if (alreadySent) {
+            Logger.logWarning(
+                TAG,
+                "VIEW_BEGIN_SKIPPED: viewBegin already dispatched for viewId=${sdkStateService?.sdkState?.value?.viewId}"
+            )
+            return
+        }
+        ViewWatchCounter.start()
+        lastVisibleAtMs = System.currentTimeMillis()
+        sdkStateService?.viewBeginCalled()
+        Logger.log(TAG, "VIEW_BEGIN_TRIGGERED: video became visible")
+        emitEvent(
+            dispatcher,
+            ViewBeginEventBuilder.build(config),
+            "viewBegin",
+            videoId,
+            playerInstanceId
+        )
+    }
+
+    private fun handleSessionRecreation(
+        event: PlayerEventType,
+        playheadTimeOverride: Int?,
+        config: SDKConfiguration,
+        dispatcher: EventDispatcher
+    ) {
+        Logger.logWarning(
+            TAG,
+            "SESSION_RECREATED: event=$event triggered without valid session; creating new view"
+        )
+        SessionService.initializeSession()
+        sdkStateService?.clearSdkState()
+        configuration?.let { sdkStateService?.updateSDKConfiguration(it) }
+        ViewWatchCounter.reset()
+        ViewWatchCounter.start()
+        sessionCreatedAtMs = System.currentTimeMillis()
+        lastVisibleAtMs = sessionCreatedAtMs
+        totalVisibleDurationMs = 0L
+
+        val newVideoId = config.videoData?.videoId
+        val newPlayerInstanceId = sdkStateService?.sdkState?.value?.playerId
+
+        sdkStateService?.viewBeginCalled()
+        emitEvent(
+            dispatcher,
+            PlayerReadyEventBuilder.build(config),
+            "playerReady",
+            newVideoId,
+            newPlayerInstanceId
+        )
+        emitEvent(
+            dispatcher,
+            ViewBeginEventBuilder.build(config),
+            "viewBegin",
+            newVideoId,
+            newPlayerInstanceId
+        )
+
+        Logger.log(
+            TAG,
+            "SESSION_RECREATED: new viewId=${sdkStateService?.sdkState?.value?.viewId}, re-dispatching original event=$event"
+        )
+        dispatchEvent(event, playheadTimeOverride)
     }
 
     /**
@@ -402,7 +352,7 @@ class FastPixDataSDK {
     fun release(playheadTimeOverride: Int? = null) {
         if (currentState().isReleased()) return
         if (!currentState().canTransitionTo(SdkLifecycleState.RELEASING)) {
-            Logger.logWarning("FastPixDataSDK", "release() ignored: state is ${currentState()}")
+            Logger.logWarning(TAG, "release() ignored: state is ${currentState()}")
             return
         }
 
@@ -413,7 +363,7 @@ class FastPixDataSDK {
             totalVisibleDurationMs
         }
         Logger.log(
-            "FastPixDataSDK",
+            TAG,
             "SESSION_ENDED: reason=release visibleDurationMs=$releaseDuration totalSessionMs=${System.currentTimeMillis() - sessionCreatedAtMs}"
         )
 
@@ -421,14 +371,14 @@ class FastPixDataSDK {
             val viewCompletedEvent = ViewCompletedEventBuilder.build(it, playheadTimeOverride)
             val payload = EventJsonCodec.serialize(viewCompletedEvent)
             Logger.log(
-                "FastPixDataSDK",
+                TAG,
                 "EVENT_EMIT_BEFORE: event=viewCompleted payload=${payload ?: "serialization_failed"}"
             )
             eventDispatcher?.enqueue(viewCompletedEvent)
         }
 
         lifecycleState.set(SdkLifecycleState.RELEASING)
-        Logger.log("FastPixDataSDK", "${Logger.SDK_RELEASE_STARTED}")
+        Logger.log(TAG, "${Logger.SDK_RELEASE_STARTED}")
 
         eventDispatcher?.flushAndShutdown()
         DependencyContainer.prepareForRelease()
@@ -439,7 +389,7 @@ class FastPixDataSDK {
         context = null
 
         lifecycleState.set(SdkLifecycleState.RELEASED)
-        Logger.log("FastPixDataSDK", "${Logger.SDK_RELEASE_COMPLETED}")
+        Logger.log(TAG, "${Logger.SDK_RELEASE_COMPLETED}")
     }
 
     private fun emitEvent(
@@ -452,7 +402,7 @@ class FastPixDataSDK {
         Logger.log("EVENT_NAME_KEY", eventName)
         val payload = EventJsonCodec.serialize(eventData)
         Logger.log(
-            "FastPixDataSDK",
+            TAG,
             "EVENT_EMIT_BEFORE: event=$eventName payload=${payload ?: "serialization_failed"}",
             videoId = videoId,
             playerInstanceId = playerInstanceId
@@ -460,14 +410,14 @@ class FastPixDataSDK {
         val enqueued = dispatcher.dispatchEvent(eventData)
         if (enqueued) {
             Logger.log(
-                "FastPixDataSDK",
+                TAG,
                 "EVENT_EMIT_AFTER: event=$eventName enqueue=success",
                 videoId = videoId,
                 playerInstanceId = playerInstanceId
             )
         } else {
             Logger.logWarning(
-                "FastPixDataSDK",
+                TAG,
                 "EVENT_EMIT_FAILED: event=$eventName enqueue=false",
                 videoId = videoId,
                 playerInstanceId = playerInstanceId

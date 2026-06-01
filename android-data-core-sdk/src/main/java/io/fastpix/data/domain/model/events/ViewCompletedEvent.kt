@@ -34,7 +34,7 @@ class ViewCompletedEvent(
     @SerialName("plht") var playerHeight: String? = null,
     @SerialName("rqvdwt") var videoWidth: String? = null,
     @SerialName("rqvdht") var videoHeight: String? = null,
-) : BaseEvent()
+) : BaseEvent
 
 object ViewCompletedEventBuilder {
     fun build(

@@ -12,6 +12,11 @@ class DeviceInfoUtility(
     private val context: Context
 ) {
 
+
+
+    val deviceTypeMobile: String = "Mobile"
+    val OSMobile: String = "Android"
+
     /**
      * Data class to hold device information
      */
@@ -30,8 +35,9 @@ class DeviceInfoUtility(
      * Get the operating system name
      * @return "Android" as the OS
      */
+
     fun getOS(): String {
-        return "Android"
+        return OSMobile
     }
 
     /**
@@ -87,7 +93,7 @@ class DeviceInfoUtility(
      * @return Device name (e.g., "Infinix")
      */
     fun getDeviceName(): String {
-        return "${Build.MANUFACTURER} ${Build.MODEL}"
+        return "${Build.DEVICE}"
     }
 
     /**
@@ -95,7 +101,7 @@ class DeviceInfoUtility(
      * @return "Mobile" as the device type
      */
     fun getDeviceType(): String {
-        return "Mobile"
+        return deviceTypeMobile
     }
 
     /**
@@ -144,13 +150,6 @@ class DeviceInfoUtility(
      */
     fun getSoftwareVersion(): String {
         return getOSVersion()
-    }
-
-    /**
-     * Get connection type
-     */
-    fun getConnectionType(): String {
-        return "unknown" // This would need network manager implementation
     }
 
     /**

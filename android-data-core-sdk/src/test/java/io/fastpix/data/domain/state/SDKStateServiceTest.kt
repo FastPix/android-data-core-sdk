@@ -5,17 +5,11 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 
 class SDKStateServiceTest {
 
-    private lateinit var stateService: SDKStateService
-
-    @Before
-    fun setUp() {
-        stateService = SDKStateService()
-    }
+    private val stateService = SDKStateService()
 
     @Test
     fun `initial state has viewBeginCalled as false`() {

@@ -80,7 +80,7 @@ class ErrorEvent(
     @SerialName("cm8") var cm8: String? = null,
     @SerialName("cm9") var cm9: String? = null,
     @SerialName("cm10") var cm10: String? = null,
-) : BaseEvent()
+) : BaseEvent
 
 
 object ErrorEventBuilder {

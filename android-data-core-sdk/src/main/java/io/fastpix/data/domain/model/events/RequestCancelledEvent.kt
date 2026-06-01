@@ -25,7 +25,7 @@ class RequestCancelledEvent(
     @SerialName("rqty") var requestMethod: String? = null,
     @SerialName("rqhn") var requestHostName: String? = null,
     @SerialName("rqca") var requestCancel: String? = null,
-) : BaseEvent()
+) : BaseEvent
 
 
 object RequestCancelledEventBuilder {

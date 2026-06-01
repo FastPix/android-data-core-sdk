@@ -44,14 +44,16 @@ import java.util.Locale
 
 @OptIn(UnstableApi::class)
 class VideoPlayerActivity : AppCompatActivity() {
-    private lateinit var binding: ActivityVideoPlayerBinding
-    private lateinit var exoPlayer: ExoPlayer
+    private val binding: ActivityVideoPlayerBinding by lazy {
+        ActivityVideoPlayerBinding.inflate(layoutInflater)
+    }
+    private val exoPlayer: ExoPlayer by lazy { ExoPlayer.Builder(this).build() }
     private var isFullscreen = false
     private var controlsVisible = true
     private val controlsHandler = Handler(Looper.getMainLooper())
     private val hideControlsRunnable = Runnable { hideControls() }
-    private lateinit var fastPixDataSDK: FastPixBaseMedia3Player
-    private lateinit var muxDataSdk: MuxStatsSdkMedia3<ExoPlayer>
+    private var fastPixDataSDK: FastPixBaseMedia3Player? = null
+    private var muxDataSdk: MuxStatsSdkMedia3<ExoPlayer>? = null
     private var videoModel: DummyData? = null
     private var episodeList: ArrayList<DummyData>? = null
     private var currentEpisodeIndex: Int = 0
@@ -61,14 +63,15 @@ class VideoPlayerActivity : AppCompatActivity() {
     private var userTriggeredFullscreen = false
 
     // Network connectivity monitoring
-    private lateinit var connectivityManager: ConnectivityManager
+    private val connectivityManager: ConnectivityManager by lazy {
+        getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+    }
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var wasPlayingBeforeNetworkLoss = false
     private var hadNetworkError = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityVideoPlayerBinding.inflate(layoutInflater)
         setContentView(binding.root)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -92,9 +95,6 @@ class VideoPlayerActivity : AppCompatActivity() {
 
         // Allow sensor-based rotation at all times
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR
-
-        // Initialize connectivity manager
-        connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
 
         setupPlayer()
         setupControls()
@@ -172,8 +172,8 @@ class VideoPlayerActivity : AppCompatActivity() {
             this, // context
             playerView = binding.playerView, // media3 playerView from XML
             exoPlayer = exoPlayer, // media3 player
-            workSpaceId = "1166879320441913346",
-            beaconUrl = "anlytix.app",
+            workSpaceId = "workspace-id",
+            beaconUrl = "beacon-url",
             enableLogging = false,
             playerDataDetails = playerDataDetails,
             videoDataDetails = videoDataDetails,
@@ -182,9 +182,6 @@ class VideoPlayerActivity : AppCompatActivity() {
     }
 
     private fun setupPlayer() {
-        // Create ExoPlayer instance
-        exoPlayer = ExoPlayer.Builder(this).build()
-
         // Set player to PlayerView
         binding.playerView.player = exoPlayer
         // Create MediaItem from URL
@@ -295,8 +292,8 @@ class VideoPlayerActivity : AppCompatActivity() {
         currentEpisodeIndex++
         videoModel = episodeList?.getOrNull(currentEpisodeIndex) ?: return
 
-        fastPixDataSDK.release()
-        muxDataSdk.release()
+        fastPixDataSDK?.release()
+        muxDataSdk?.release()
         exoPlayer.setMediaItem(MediaItem.fromUri(videoModel!!.url))
         exoPlayer.prepare()
         exoPlayer.playWhenReady = true
@@ -468,8 +465,8 @@ class VideoPlayerActivity : AppCompatActivity() {
         controlsHandler.removeCallbacks(hideControlsRunnable)
         unregisterNetworkCallback()
         exoPlayer.release()
-        fastPixDataSDK.release()
-        muxDataSdk.release()
+        fastPixDataSDK?.release()
+        muxDataSdk?.release()
     }
 
     override fun onResume() {

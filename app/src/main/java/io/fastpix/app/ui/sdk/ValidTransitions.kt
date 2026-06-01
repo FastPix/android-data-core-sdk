@@ -1,8 +1,11 @@
-package io.fastpix.data.exo
+package io.fastpix.app.ui.sdk
+
+import io.fastpix.data.exo.PlayerEvent
 
 internal val validTransitions = mapOf(
     null to setOf(PlayerEvent.PLAY, PlayerEvent.ERROR),
-    PlayerEvent.PLAY to setOf(PlayerEvent.PLAYING, PlayerEvent.ENDED, PlayerEvent.PAUSE, PlayerEvent.VARIANT_CHANGED,
+    PlayerEvent.PLAY to setOf(
+        PlayerEvent.PLAYING, PlayerEvent.ENDED, PlayerEvent.PAUSE, PlayerEvent.VARIANT_CHANGED,
         PlayerEvent.SEEKING,
         PlayerEvent.ERROR),
     PlayerEvent.PLAYING to setOf(
@@ -35,7 +38,8 @@ internal val validTransitions = mapOf(
         PlayerEvent.ERROR,
         PlayerEvent.VARIANT_CHANGED
     ),
-    PlayerEvent.SEEKED to setOf(PlayerEvent.PLAY, PlayerEvent.ENDED, PlayerEvent.ERROR,  PlayerEvent.VARIANT_CHANGED,
+    PlayerEvent.SEEKED to setOf(
+        PlayerEvent.PLAY, PlayerEvent.ENDED, PlayerEvent.ERROR,  PlayerEvent.VARIANT_CHANGED,
         PlayerEvent.PLAYING, PlayerEvent.SEEKING),
     PlayerEvent.ENDED to setOf(
         PlayerEvent.PLAY,
@@ -43,5 +47,7 @@ internal val validTransitions = mapOf(
         PlayerEvent.ERROR,
         PlayerEvent.VARIANT_CHANGED,
     ),
-    PlayerEvent.ERROR to setOf(PlayerEvent.PLAYING, PlayerEvent.PLAY, PlayerEvent.PAUSE,PlayerEvent.BUFFERED)
+    PlayerEvent.ERROR to setOf(
+        PlayerEvent.PLAYING, PlayerEvent.PLAY, PlayerEvent.PAUSE,
+        PlayerEvent.BUFFERED)
 )

@@ -20,6 +20,7 @@ import androidx.media3.exoplayer.source.LoadEventInfo
 import androidx.media3.exoplayer.source.MediaLoadData
 import androidx.media3.exoplayer.source.TrackGroupArray
 import io.fastpix.app.ui.sdk.FastPixMedia3LibraryInfo
+import io.fastpix.app.ui.sdk.validTransitions
 import io.fastpix.data.FastPixAnalytics
 import io.fastpix.data.FastPixDataSDK
 import io.fastpix.data.domain.SDKConfiguration

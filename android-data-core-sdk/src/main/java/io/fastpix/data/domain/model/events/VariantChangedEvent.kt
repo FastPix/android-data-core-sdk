@@ -27,7 +27,7 @@ class VariantChangedEvent(
     @SerialName("vdsofs") var frameRate: Int? = null,
     @SerialName("vdsomity") var mimeType: String? = null,
     @SerialName("vdsobi") var bitrate: String? = null,
-) : BaseEvent()
+) : BaseEvent
 
 
 object VariantChangedEventBuilder {

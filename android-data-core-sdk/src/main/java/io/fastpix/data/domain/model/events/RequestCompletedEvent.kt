@@ -25,7 +25,7 @@ class RequestCompletedEvent(
     @SerialName("rqrphs") var requestResponseHeaders: String? = null,
     @SerialName("rqhn") var requestHostName: String? = null,
     @SerialName("rqca") var requestCancel: String? = null,
-) : BaseEvent()
+) : BaseEvent
 
 object RequestCompletedEventBuilder {
     fun build(configService: SDKConfiguration): RequestCompletedEvent {

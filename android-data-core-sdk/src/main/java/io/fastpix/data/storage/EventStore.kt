@@ -10,6 +10,10 @@ class EventStore(
     private val database: AnalyticsDatabase,
     private val legacyPersistenceManager: EventPersistenceManager
 ) {
+    companion object {
+        private const val TAG = "EventStore"
+    }
+
     private val sessionDao = database.sessionDao()
     private val eventDao = database.eventDao()
 
@@ -22,11 +26,11 @@ class EventStore(
 
     suspend fun onNewEvent(event: BaseEvent): Boolean {
         val viewId = event.viewId?.takeIf { it.isNotBlank() } ?: run {
-            Logger.logWarning("EventStore", "BUFFER_SKIP: missing viewId event=${event.eventName}")
+            Logger.logWarning(TAG, "BUFFER_SKIP: missing viewId event=${event.eventName}")
             return false
         }
         val payload = EventJsonCodec.serialize(event) ?: run {
-            Logger.logWarning("EventStore", "BUFFER_SKIP: serialize failed event=${event.eventName}")
+            Logger.logWarning(TAG, "BUFFER_SKIP: serialize failed event=${event.eventName}")
             return false
         }
         val now = System.currentTimeMillis()
@@ -59,7 +63,7 @@ class EventStore(
                 )
             )
             Logger.log(
-                "EventStore",
+                TAG,
                 "BUFFERED_EVENT: event=${event.eventName} dbSessionId=$sessionId createdNewSession=$createdNewSession"
             )
         }
@@ -70,12 +74,12 @@ class EventStore(
         database.withTransaction {
             sessionDao.updateStatus(SessionStatus.ACTIVE, SessionStatus.COMPLETED)
         }
-        Logger.log("EventStore", "SESSIONS_MARKED_COMPLETED")
+        Logger.log(TAG, "SESSIONS_MARKED_COMPLETED")
     }
 
     suspend fun getCompletedSessions(): List<SessionEntity> {
         return sessionDao.getSessionsByStatus(SessionStatus.COMPLETED).also {
-            Logger.log("EventStore", "COMPLETED_SESSIONS_FETCHED: count=${it.size}")
+            Logger.log(TAG, "COMPLETED_SESSIONS_FETCHED: count=${it.size}")
         }
     }
 
@@ -95,7 +99,7 @@ class EventStore(
     suspend fun deleteUploadedEvents(eventIds: List<Long>) {
         if (eventIds.isNotEmpty()) {
             eventDao.deleteByIds(eventIds)
-            Logger.log("EventStore", "UPLOADED_EVENTS_DELETED: count=${eventIds.size}")
+            Logger.log(TAG, "UPLOADED_EVENTS_DELETED: count=${eventIds.size}")
         }
     }
 
@@ -103,9 +107,9 @@ class EventStore(
         val remaining = eventDao.countBySessionId(sessionId)
         if (remaining == 0) {
             sessionDao.deleteBySessionId(sessionId)
-            Logger.log("EventStore", "SESSION_DELETED_EMPTY: sessionId=$sessionId")
+            Logger.log(TAG, "SESSION_DELETED_EMPTY: sessionId=$sessionId")
         } else {
-            Logger.log("EventStore", "SESSION_RETAINED: sessionId=$sessionId remainingEvents=$remaining")
+            Logger.log(TAG, "SESSION_RETAINED: sessionId=$sessionId remainingEvents=$remaining")
         }
     }
 
@@ -146,6 +150,6 @@ class EventStore(
                 }
         }
         legacyPersistenceManager.clearPendingEvents()
-        Logger.log("EventStore", "Migrated ${legacyEvents.size} legacy events into Room")
+        Logger.log(TAG, "Migrated ${legacyEvents.size} legacy events into Room")
     }
 }

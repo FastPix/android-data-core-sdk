@@ -10,6 +10,10 @@ class Logger private constructor() {
 
     companion object {
         private const val TAG = "FastPixAnalytics"
+        private const val LEVEL_DEBUG = "DEBUG"
+        private const val LEVEL_INFO = "INFO"
+        private const val LEVEL_WARN = "WARN"
+        private const val LEVEL_ERROR = "ERROR"
         private var isLoggingEnabled = false
         private val timeFormatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ", Locale.US)
         
@@ -44,7 +48,7 @@ class Logger private constructor() {
          */
         fun log(message: String) {
             if (isLoggingEnabled) {
-                Log.d(TAG, formatMessage("DEBUG", TAG, message, null, null, null))
+                Log.d(TAG, formatMessage(LEVEL_DEBUG, TAG, message, null, null, null))
             }
         }
         
@@ -67,7 +71,7 @@ class Logger private constructor() {
             if (isLoggingEnabled) {
                 Log.d(
                     TAG,
-                    formatMessage("DEBUG", tag, message, sessionId, videoId, playerInstanceId)
+                    formatMessage(LEVEL_DEBUG, tag, message, sessionId, videoId, playerInstanceId)
                 )
             }
         }
@@ -77,7 +81,7 @@ class Logger private constructor() {
          */
         fun logError(message: String, throwable: Throwable? = null) {
             if (isLoggingEnabled) {
-                Log.e(TAG, formatMessage("ERROR", TAG, message, null, null, null), throwable)
+                Log.e(TAG, formatMessage(LEVEL_ERROR, TAG, message, null, null, null), throwable)
             }
         }
         
@@ -86,7 +90,7 @@ class Logger private constructor() {
          */
         fun logError(tag: String, message: String, throwable: Throwable? = null) {
             if (isLoggingEnabled) {
-                Log.e(TAG, formatMessage("ERROR", tag, message, null, null, null), throwable)
+                Log.e(TAG, formatMessage(LEVEL_ERROR, tag, message, null, null, null), throwable)
             }
         }
 
@@ -101,7 +105,7 @@ class Logger private constructor() {
             if (isLoggingEnabled) {
                 Log.e(
                     TAG,
-                    formatMessage("ERROR", tag, message, sessionId, videoId, playerInstanceId),
+                    formatMessage(LEVEL_ERROR, tag, message, sessionId, videoId, playerInstanceId),
                     throwable
                 )
             }
@@ -112,7 +116,7 @@ class Logger private constructor() {
          */
         fun logInfo(message: String) {
             if (isLoggingEnabled) {
-                Log.i(TAG, formatMessage("INFO", TAG, message, null, null, null))
+                Log.i(TAG, formatMessage(LEVEL_INFO, TAG, message, null, null, null))
             }
         }
         
@@ -121,7 +125,7 @@ class Logger private constructor() {
          */
         fun logInfo(tag: String, message: String) {
             if (isLoggingEnabled) {
-                Log.i(TAG, formatMessage("INFO", tag, message, null, null, null))
+                Log.i(TAG, formatMessage(LEVEL_INFO, tag, message, null, null, null))
             }
         }
 
@@ -135,7 +139,7 @@ class Logger private constructor() {
             if (isLoggingEnabled) {
                 Log.i(
                     TAG,
-                    formatMessage("INFO", tag, message, sessionId, videoId, playerInstanceId)
+                    formatMessage(LEVEL_INFO, tag, message, sessionId, videoId, playerInstanceId)
                 )
             }
         }
@@ -145,7 +149,7 @@ class Logger private constructor() {
          */
         fun logWarning(message: String) {
             if (isLoggingEnabled) {
-                Log.w(TAG, formatMessage("WARN", TAG, message, null, null, null))
+                Log.w(TAG, formatMessage(LEVEL_WARN, TAG, message, null, null, null))
             }
         }
         
@@ -154,7 +158,7 @@ class Logger private constructor() {
          */
         fun logWarning(tag: String, message: String) {
             if (isLoggingEnabled) {
-                Log.w(TAG, formatMessage("WARN", tag, message, null, null, null))
+                Log.w(TAG, formatMessage(LEVEL_WARN, tag, message, null, null, null))
             }
         }
 
@@ -168,7 +172,7 @@ class Logger private constructor() {
             if (isLoggingEnabled) {
                 Log.w(
                     TAG,
-                    formatMessage("WARN", tag, message, sessionId, videoId, playerInstanceId)
+                    formatMessage(LEVEL_WARN, tag, message, sessionId, videoId, playerInstanceId)
                 )
             }
         }

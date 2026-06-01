@@ -16,18 +16,10 @@ class NetworkTracker(
     context: Context
 ) {
 
-    private lateinit var stateService: SDKStateService
-
     private val connectivityManager =
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
-    init {
-        initializeDependencies()
-    }
-    
-    private fun initializeDependencies() {
-        stateService = DependencyContainer.getSDKStateService()
-    }
+    private val stateService: SDKStateService = DependencyContainer.getSDKStateService()
 
     /**
      * Flow that emits true when network is available, false otherwise

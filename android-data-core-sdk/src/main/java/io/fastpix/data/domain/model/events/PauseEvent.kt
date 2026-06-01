@@ -28,7 +28,7 @@ class PauseEvent(
     @SerialName("vetlctpbti") var viewTotalContentPlayBackTime: String? = null,
     @SerialName("plispu") var playerIsPaused: String? = null,
     @SerialName("snepti") var sessionExpiredTime: String? = null,
-) : BaseEvent()
+) : BaseEvent
 
 object PauseEventBuilder {
 

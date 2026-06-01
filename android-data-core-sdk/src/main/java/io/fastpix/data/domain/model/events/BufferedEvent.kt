@@ -22,7 +22,7 @@ class BufferedEvent(
     @SerialName("verbdu") var viewRebufferDuration: String? = null,
     @SerialName("verbfq") var viewBufferFrequency: String? = null,
     @SerialName("verbpg") var viewBufferPercentage: String? = null,
-) : BaseEvent()
+) : BaseEvent
 
 
 object BufferedEventBuilder {

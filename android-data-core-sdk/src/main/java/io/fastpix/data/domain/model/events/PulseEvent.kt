@@ -38,7 +38,7 @@ class PulseEvent(
     @SerialName("vdsour") var videoSourceUrl: String? = null,
     @SerialName("vdsohn") var videoHostName: String? = null,
     @SerialName("vdcn") var videoCDN: String? = null,
-) : BaseEvent()
+) : BaseEvent
 
 object PulseEventBuilder {
     fun build(configService: SDKConfiguration): PulseEvent {
