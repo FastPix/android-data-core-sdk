@@ -172,8 +172,8 @@ class VideoPlayerActivity : AppCompatActivity() {
             this, // context
             playerView = binding.playerView, // media3 playerView from XML
             exoPlayer = exoPlayer, // media3 player
-            workSpaceId = "1109888358169935873",
-            beaconUrl = "anlytix.io",
+            workSpaceId = "workspace-id",
+            beaconUrl = "beacon-url",
             enableLogging = false,
             playerDataDetails = playerDataDetails,
             videoDataDetails = videoDataDetails,

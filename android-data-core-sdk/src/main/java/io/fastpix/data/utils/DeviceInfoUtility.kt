@@ -93,7 +93,7 @@ class DeviceInfoUtility(
      * @return Device name (e.g., "Infinix")
      */
     fun getDeviceName(): String {
-        return "${Build.MANUFACTURER} ${Build.MODEL}"
+        return "${Build.DEVICE}"
     }
 
     /**
