@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.1]
+### Changed
+- Refactored `BaseEvent` from an abstract class to an interface; all event models updated accordingly.
+- Centralized event serialization and deserialization in `EventJsonCodec` using a binding-based lookup table, replacing verbose `when` blocks in `EventPersistenceManager` and `EventStore`.
+- Refactored `FastPixDataSDK.dispatchEvent` to use a data-driven `eventDispatchTable` for event building and side-effect management.
+- Streamlined session recreation logic in `FastPixDataSDK`.
+- `DependencyContainer` now uses lazy initialization and safer null handling for service instances.
+- Improved `FastPixDataSDK` lifecycle management and event dispatching flow.
+- `DeviceInfoUtility.getDeviceName()` now returns `Build.DEVICE` instead of a manufacturer and model string.
+
+### Improved
+- Enhanced null safety in `EventDataCalculator` during view metric calculations.
+- Structured logging with standardized `TAG` constants in `EventPersistenceManager`, `EventStore`, and related modules.
+- Replaced hardcoded strings with private constants for logging levels and shared preference keys.
+- Cleaned up internal state management in `NetworkTracker` and `SessionService`.
+- Simplified `DeviceInfoUtility` with property-based OS and device type constants.
+- Reduced code size and complexity across persistence, storage, and upload pipeline components.
+
 ## [1.3.0]
 ### Added
 - Added unit test coverage for session lifecycle and SDK state transitions (`SessionServiceTest` and `SDKStateServiceTest`).
