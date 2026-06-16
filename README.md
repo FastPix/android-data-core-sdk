@@ -332,8 +332,8 @@ See [CHANGELOG.md](CHANGELOG.md) for release history and version updates.
 
 For questions, issues, or feature requests:
 
-- **Email**: support@fastpix.io
-- **Documentation**: [FastPix Documentation](https://docs.fastpix.io)
+- **Email**: support@fastpix.com
+- **Documentation**: [FastPix Documentation](https://fastpix.com/docs)
 - **GitHub Issues**: [Report an issue](https://github.com/FastPix/android-core-data-sdk/issues)
 
 ## License
